@@ -61,8 +61,6 @@ export default function TeamPageContent() {
   const qrToken = searchParams.get("qr");
   const teamIdParam = searchParams.get("id");
 
-  const supabase = createClient();
-
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +78,7 @@ export default function TeamPageContent() {
     setTeam(null);
 
     try {
+      const supabase = createClient();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let query: any = supabase
         .from("teams")
@@ -121,7 +120,7 @@ export default function TeamPageContent() {
     }
 
     setLoading(false);
-  }, [qrToken, teamIdParam, supabase]);
+  }, [qrToken, teamIdParam]);
 
   useEffect(() => { loadTeam(); }, [loadTeam]);
 

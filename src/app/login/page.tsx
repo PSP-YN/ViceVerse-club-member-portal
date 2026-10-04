@@ -9,7 +9,6 @@ import { Eye, EyeOff, Loader2, AlertTriangle } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const supabase = createClient();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,6 +20,8 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    const supabase = createClient();
 
     const { data, error: authError } = await supabase.auth.signInWithPassword({
       email,
