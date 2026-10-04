@@ -9,6 +9,7 @@ import {
   Megaphone,
   ArrowRight,
   Activity,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -21,12 +22,9 @@ export const metadata = {
 async function getStats() {
   const supabase = await createClient();
 
-  // Fetch operation stats from the database
   const { data: members } = await supabase
     .from("members")
-    .select(
-      "registration_status, goodies_status, lunch_status, snacks_status, team_id"
-    );
+    .select("registration_status, goodies_status, lunch_status, snacks_status, team_id");
 
   const { data: teams } = await supabase
     .from("teams")
@@ -48,15 +46,30 @@ async function getStats() {
   const lunch = members?.filter((m) => m.lunch_status).length ?? 0;
   const snacks = members?.filter((m) => m.snacks_status).length ?? 0;
 
-  return {
-    totalTeams,
-    totalMembers,
-    registered,
-    goodies,
-    lunch,
-    snacks,
-    announcements: announcements ?? [],
-  };
+  return { totalTeams, totalMembers, registered, goodies, lunch, snacks, announcements: announcements ?? [] };
+}
+
+function ProgressMini({ value, total, color }: { value: number; total: number; color: string }) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  return (
+    <div className="mt-2 space-y-1">
+      <div className="flex justify-between items-center">
+        <span className="text-lg font-bold" style={{ color: "oklch(0.92 0.008 240)", letterSpacing: "-0.02em" }}>
+          {value}
+          <span className="text-sm font-medium ml-1" style={{ color: "oklch(0.45 0.018 240)" }}>
+            / {total}
+          </span>
+        </span>
+        <span className="mono-label">{pct}%</span>
+      </div>
+      <div className="h-1 rounded-full overflow-hidden" style={{ background: "oklch(0.18 0.012 240)" }}>
+        <div
+          className="h-full rounded-full animate-progress"
+          style={{ width: `${pct}%`, background: color }}
+        />
+      </div>
+    </div>
+  );
 }
 
 export default async function DashboardPage() {
@@ -76,46 +89,30 @@ export default async function DashboardPage() {
     // Stats will be empty if database isn't connected
   }
 
-  const statCards = [
-    {
-      label: "Teams Registered",
-      value: stats.totalTeams,
-      icon: Users,
-      color: "text-blue-400",
-      bg: "bg-blue-950/40",
-      border: "border-blue-800/40",
-    },
+  const operationStats = [
     {
       label: "Registrations",
-      value: `${stats.registered}/${stats.totalMembers}`,
+      value: stats.registered,
       icon: CheckCircle2,
-      color: "text-green-400",
-      bg: "bg-green-950/40",
-      border: "border-green-800/40",
+      color: "oklch(0.65 0.18 150)",
     },
     {
-      label: "Goodies Distributed",
-      value: `${stats.goodies}/${stats.totalMembers}`,
+      label: "Goodies",
+      value: stats.goodies,
       icon: Gift,
-      color: "text-purple-400",
-      bg: "bg-purple-950/40",
-      border: "border-purple-800/40",
+      color: "oklch(0.72 0.18 185)",
     },
     {
-      label: "Lunch Distributed",
-      value: `${stats.lunch}/${stats.totalMembers}`,
+      label: "Lunch",
+      value: stats.lunch,
       icon: Coffee,
-      color: "text-orange-400",
-      bg: "bg-orange-950/40",
-      border: "border-orange-800/40",
+      color: "oklch(0.76 0.17 52)",
     },
     {
-      label: "Snacks Distributed",
-      value: `${stats.snacks}/${stats.totalMembers}`,
+      label: "Snacks",
+      value: stats.snacks,
       icon: Cookie,
-      color: "text-yellow-400",
-      bg: "bg-yellow-950/40",
-      border: "border-yellow-800/40",
+      color: "oklch(0.75 0.15 60)",
     },
   ];
 
@@ -123,128 +120,251 @@ export default async function DashboardPage() {
     {
       href: "/dashboard/scan",
       label: "Scan Team QR",
-      description: "Scan a team's QR code to start operations",
+      description: "Use camera to scan a team's QR code",
       icon: QrCode,
-      color: "from-blue-600 to-violet-600",
+      tag: "Primary",
     },
     {
       href: "/dashboard/team",
       label: "Enter Team ID",
-      description: "Manually look up a team by their Team ID",
+      description: "Manually look up a team by their ID",
       icon: Users,
-      color: "from-violet-600 to-pink-600",
+      tag: "Fallback",
     },
     {
       href: "/dashboard/announcements",
-      label: "View Announcements",
-      description: "Read organizer announcements and alerts",
+      label: "Announcements",
+      description: "Read organizer communications",
       icon: Megaphone,
-      color: "from-pink-600 to-orange-600",
+      tag: "Read-only",
     },
     {
       href: "/dashboard/operations",
       label: "Operations Status",
-      description: "Monitor event-day activity and progress",
+      description: "Monitor event-day progress in real time",
       icon: Activity,
-      color: "from-green-600 to-teal-600",
+      tag: "Live",
     },
   ];
 
-  return (
-    <div className="space-y-8 max-w-6xl">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-          Club Member{" "}
-          <span className="vv-gradient-text">Dashboard</span>
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Manage event-day operations for ViceVerse Ideathon
-        </p>
-      </div>
+  const overallPct =
+    stats.totalMembers > 0
+      ? Math.round(
+          ((stats.registered + stats.goodies + stats.lunch + stats.snacks) /
+            (stats.totalMembers * 4)) *
+            100
+        )
+      : 0;
 
-      {/* Announcements Banner */}
-      {stats.announcements.length > 0 && (
-        <div className="rounded-2xl border border-yellow-800/40 bg-yellow-950/20 p-4 space-y-2">
-          <div className="flex items-center gap-2 text-yellow-400 font-semibold text-sm">
-            <Megaphone className="w-4 h-4" />
-            Latest Announcements
+  return (
+    <div className="space-y-6 animate-fade-up">
+      {/* ── Page header ── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="mono-label">Event Console</span>
           </div>
-          {stats.announcements.map((ann) => (
-            <div key={ann.id} className="pl-6">
-              <p className="text-sm font-medium text-foreground">{ann.title}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {ann.message}
+          <h1
+            className="text-2xl font-bold"
+            style={{ color: "oklch(0.94 0.008 240)", letterSpacing: "-0.025em" }}
+          >
+            Operations{" "}
+            <span className="vv-gradient-text">Dashboard</span>
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: "oklch(0.50 0.018 240)" }}>
+            ViceVerse Ideathon 2026 — event-day management
+          </p>
+        </div>
+
+        {/* Overall progress chip */}
+        {stats.totalMembers > 0 && (
+          <div
+            className="flex items-center gap-3 px-4 py-2.5 rounded"
+            style={{
+              background: "oklch(0.12 0.012 240)",
+              border: "1px solid oklch(0.20 0.012 240)",
+            }}
+          >
+            <TrendingUp className="w-4 h-4" style={{ color: "oklch(0.76 0.17 52)" }} />
+            <div>
+              <p className="mono-label">Overall Progress</p>
+              <p
+                className="text-lg font-bold leading-none"
+                style={{ color: "oklch(0.82 0.17 52)" }}
+              >
+                {overallPct}%
               </p>
             </div>
-          ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Announcements banner ── */}
+      {stats.announcements.length > 0 && (
+        <div
+          className="rounded px-4 py-3"
+          style={{
+            background: "oklch(0.76 0.17 52 / 0.06)",
+            border: "1px solid oklch(0.76 0.17 52 / 0.25)",
+            borderLeft: "3px solid oklch(0.76 0.17 52)",
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Megaphone className="w-3.5 h-3.5" style={{ color: "oklch(0.82 0.17 52)" }} />
+            <span className="mono-label" style={{ color: "oklch(0.76 0.17 52)" }}>
+              Organizer Announcements
+            </span>
+          </div>
+          <div className="space-y-1">
+            {stats.announcements.map((ann) => (
+              <div key={ann.id} className="flex items-start gap-2">
+                <span className="text-xs mt-0.5" style={{ color: "oklch(0.76 0.17 52)" }}>·</span>
+                <div>
+                  <span className="text-sm font-medium" style={{ color: "oklch(0.88 0.01 240)" }}>
+                    {ann.title}
+                  </span>
+                  {ann.message && (
+                    <span className="text-xs ml-1.5" style={{ color: "oklch(0.52 0.018 240)" }}>
+                      — {ann.message}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
           <Link
             href="/dashboard/announcements"
-            className="flex items-center gap-1 text-xs text-yellow-400 hover:text-yellow-300 pl-6 pt-1"
+            className="inline-flex items-center gap-1 text-xs mt-2 transition-colors hover:underline"
+            style={{ color: "oklch(0.76 0.17 52)" }}
           >
             View all <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
       )}
 
-      {/* Stats Grid */}
+      {/* ── Top stat row: Teams + Members ── */}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          {
+            label: "Approved Teams",
+            value: stats.totalTeams,
+            icon: Users,
+            mono: "Active",
+            color: "oklch(0.72 0.18 185)",
+          },
+          {
+            label: "Total Participants",
+            value: stats.totalMembers,
+            icon: CheckCircle2,
+            mono: "Members",
+            color: "oklch(0.65 0.18 150)",
+          },
+        ].map((s) => {
+          const Icon = s.icon;
+          return (
+            <div
+              key={s.label}
+              className="vv-card rounded p-4"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="mono-label">{s.label}</span>
+                <Icon className="w-3.5 h-3.5" style={{ color: s.color }} />
+              </div>
+              <p
+                className="text-3xl font-bold leading-none"
+                style={{ color: "oklch(0.92 0.008 240)", letterSpacing: "-0.03em" }}
+              >
+                {s.value}
+              </p>
+              <p className="text-xs mt-1" style={{ color: "oklch(0.45 0.018 240)" }}>
+                {s.mono}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Distribution progress ── */}
       <div>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-          Event Operations Overview
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {statCards.map((stat) => {
+        <p className="section-label mb-3">Distribution Progress</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {operationStats.map((stat) => {
             const Icon = stat.icon;
             return (
-              <div
-                key={stat.label}
-                className={`glass-card rounded-2xl p-4 border ${stat.border} ${stat.bg} transition-all hover:scale-[1.02]`}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <div className={`p-1.5 rounded-lg bg-black/20`}>
-                    <Icon className={`w-4 h-4 ${stat.color}`} />
-                  </div>
+              <div key={stat.label} className="vv-card rounded p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Icon className="w-3.5 h-3.5" style={{ color: stat.color }} />
+                  <span className="mono-label">{stat.label}</span>
                 </div>
-                <p className={`text-xl font-bold ${stat.color}`}>
-                  {stat.value}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {stat.label}
-                </p>
+                <ProgressMini
+                  value={stat.value}
+                  total={stats.totalMembers}
+                  color={stat.color}
+                />
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* ── Quick Actions ── */}
       <div>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-          Quick Actions
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <p className="section-label mb-3">Quick Actions</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {quickActions.map((action) => {
             const Icon = action.icon;
             return (
               <Link
                 key={action.href}
                 href={action.href}
-                className="glass-card rounded-2xl p-5 border border-border hover:border-primary/30 hover:glow-border transition-all group flex items-start gap-4"
+                className="
+                  group flex items-center gap-4 px-4 py-3.5 rounded
+                  transition-all duration-150
+                  hover:border-[oklch(0.26_0.012_240)] hover:bg-[oklch(0.135_0.012_240)]
+                "
+                style={{
+                  background: "oklch(0.12 0.012 240)",
+                  border: "1px solid oklch(0.20 0.012 240)",
+                }}
               >
                 <div
-                  className={`p-3 rounded-xl bg-gradient-to-br ${action.color} shadow-lg group-hover:scale-110 transition-transform`}
+                  className="w-9 h-9 rounded flex items-center justify-center flex-shrink-0 transition-colors"
+                  style={{
+                    background: "oklch(0.155 0.012 240)",
+                    border: "1px solid oklch(0.22 0.012 240)",
+                  }}
                 >
-                  <Icon className="w-5 h-5 text-white" />
+                  <Icon className="w-4 h-4" style={{ color: "oklch(0.76 0.17 52)" }} />
                 </div>
+
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                  <p
+                    className="text-sm font-semibold leading-tight transition-colors"
+                    style={{ color: "oklch(0.88 0.01 240)" }}
+                  >
                     {action.label}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  <p className="text-xs mt-0.5" style={{ color: "oklch(0.48 0.018 240)" }}>
                     {action.description}
                   </p>
                 </div>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0 mt-0.5" />
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span
+                    className="text-[0.6rem] font-mono font-medium px-1.5 py-0.5 rounded"
+                    style={{
+                      background: "oklch(0.155 0.012 240)",
+                      color: "oklch(0.45 0.018 240)",
+                      border: "1px solid oklch(0.22 0.012 240)",
+                    }}
+                  >
+                    {action.tag}
+                  </span>
+                  <ArrowRight
+                    className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5"
+                    style={{ color: "oklch(0.40 0.018 240)" }}
+                  />
+                </div>
               </Link>
             );
           })}

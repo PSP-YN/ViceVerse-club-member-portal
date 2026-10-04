@@ -21,9 +21,7 @@ async function getOperationsData() {
 
   const { data: members } = await supabase
     .from("members")
-    .select(
-      "id, name, team_id, registration_status, goodies_status, lunch_status, snacks_status"
-    );
+    .select("id, name, team_id, registration_status, goodies_status, lunch_status, snacks_status");
 
   const { data: teams } = await supabase
     .from("teams")
@@ -34,7 +32,7 @@ async function getOperationsData() {
     .from("audit_logs")
     .select("id, performed_by_name, activity, timestamp, member_id")
     .order("timestamp", { ascending: false })
-    .limit(10);
+    .limit(15);
 
   const totalMembers = members?.length ?? 0;
   const totalTeams = teams?.length ?? 0;
@@ -44,7 +42,6 @@ async function getOperationsData() {
   const lunch = members?.filter((m) => m.lunch_status).length ?? 0;
   const snacks = members?.filter((m) => m.snacks_status).length ?? 0;
 
-  // Pending teams (have at least one member with pending registration)
   const membersByTeam = members?.reduce(
     (acc, m) => {
       acc[m.team_id] = acc[m.team_id] || [];
@@ -72,24 +69,57 @@ async function getOperationsData() {
   };
 }
 
-function ProgressBar({ value, total }: { value: number; total: number }) {
+function ProgressBar({ value, total, color }: { value: number; total: number; color: string }) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs">
-        <span className="text-muted-foreground">
-          {value}/{total}
+    <div className="space-y-1.5">
+      <div className="flex justify-between items-center">
+        <span className="text-base font-bold" style={{ color: "oklch(0.92 0.008 240)", letterSpacing: "-0.02em" }}>
+          {value}
+          <span className="text-xs font-normal ml-1" style={{ color: "oklch(0.45 0.018 240)" }}>/ {total}</span>
         </span>
-        <span className="font-medium text-foreground">{pct}%</span>
+        <span className="mono-label" style={{ color }}>{pct}%</span>
       </div>
-      <div className="h-2 rounded-full bg-secondary overflow-hidden">
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(0.18 0.012 240)" }}>
         <div
-          className="h-full rounded-full vv-gradient transition-all duration-500"
-          style={{ width: `${pct}%` }}
+          className="h-full rounded-full animate-progress"
+          style={{ width: `${pct}%`, background: color }}
         />
       </div>
     </div>
   );
+}
+
+function activityLabel(a: string) {
+  const map: Record<string, string> = {
+    registration: "Registration",
+    goodies: "Goodies",
+    lunch: "Lunch",
+    snacks: "Snacks",
+  };
+  return map[a] ?? a;
+}
+
+function activityColor(a: string) {
+  const map: Record<string, string> = {
+    registration: "oklch(0.65 0.18 150)",
+    goodies: "oklch(0.72 0.18 185)",
+    lunch: "oklch(0.76 0.17 52)",
+    snacks: "oklch(0.75 0.15 60)",
+  };
+  return map[a] ?? "oklch(0.55 0.018 240)";
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ActivityIcon({ activity }: { activity: string }) {
+  const icons: Record<string, React.ElementType> = {
+    registration: UserCheck,
+    goodies: Gift,
+    lunch: Coffee,
+    snacks: Cookie,
+  };
+  const Icon = icons[activity] ?? Activity;
+  return <Icon className="w-3.5 h-3.5" />;
 }
 
 export default async function OperationsPage() {
@@ -116,190 +146,276 @@ export default async function OperationsPage() {
     // Empty if DB not connected
   }
 
+  const overallPct =
+    data.totalMembers > 0
+      ? Math.round(
+          ((data.registered + data.goodies + data.lunch + data.snacks) /
+            (data.totalMembers * 4)) *
+            100
+        )
+      : 0;
+
   const activityStats = [
-    {
-      label: "Registrations",
-      value: data.registered,
-      icon: UserCheck,
-      color: "text-blue-400",
-      borderColor: "border-blue-800/30",
-    },
-    {
-      label: "Goodies",
-      value: data.goodies,
-      icon: Gift,
-      color: "text-purple-400",
-      borderColor: "border-purple-800/30",
-    },
-    {
-      label: "Lunch",
-      value: data.lunch,
-      icon: Coffee,
-      color: "text-orange-400",
-      borderColor: "border-orange-800/30",
-    },
-    {
-      label: "Snacks",
-      value: data.snacks,
-      icon: Cookie,
-      color: "text-yellow-400",
-      borderColor: "border-yellow-800/30",
-    },
+    { label: "Registrations", value: data.registered, color: "oklch(0.65 0.18 150)", icon: UserCheck },
+    { label: "Goodies", value: data.goodies, color: "oklch(0.72 0.18 185)", icon: Gift },
+    { label: "Lunch", value: data.lunch, color: "oklch(0.76 0.17 52)", icon: Coffee },
+    { label: "Snacks", value: data.snacks, color: "oklch(0.75 0.15 60)", icon: Cookie },
   ];
 
-  function activityLabel(a: string) {
-    const map: Record<string, string> = {
-      registration: "Registration",
-      goodies: "Goodies",
-      lunch: "Lunch",
-      snacks: "Snacks",
-    };
-    return map[a] ?? a;
-  }
-
-  function activityIcon(a: string) {
-    const map: Record<string, React.ElementType> = {
-      registration: UserCheck,
-      goodies: Gift,
-      lunch: Coffee,
-      snacks: Cookie,
-    };
-    return map[a] ?? Activity;
-  }
-
   return (
-    <div className="max-w-4xl space-y-8">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl vv-gradient flex items-center justify-center">
-          <Activity className="w-5 h-5 text-white" />
+    <div className="max-w-4xl space-y-5 animate-fade-up">
+      {/* ── Header ── */}
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="mono-label">Live Monitoring</span>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Operations <span className="vv-gradient-text">Status</span>
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Live event-day monitoring dashboard
-          </p>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-9 h-9 rounded flex items-center justify-center flex-shrink-0"
+              style={{
+                background: "oklch(0.65 0.18 150 / 0.1)",
+                border: "1px solid oklch(0.65 0.18 150 / 0.25)",
+              }}
+            >
+              <Activity className="w-4.5 h-4.5" style={{ color: "oklch(0.68 0.18 150)" }} />
+            </div>
+            <div>
+              <h1
+                className="text-2xl font-bold"
+                style={{ color: "oklch(0.94 0.008 240)", letterSpacing: "-0.025em" }}
+              >
+                Operations{" "}
+                <span className="vv-gradient-text">Status</span>
+              </h1>
+              <p className="text-sm" style={{ color: "oklch(0.50 0.018 240)" }}>
+                Real-time event-day monitoring
+              </p>
+            </div>
+          </div>
+
+          {/* Overall progress */}
+          <div
+            className="flex items-center gap-3 px-4 py-2.5 rounded"
+            style={{
+              background: "oklch(0.12 0.012 240)",
+              border: "1px solid oklch(0.20 0.012 240)",
+            }}
+          >
+            <div>
+              <p className="mono-label">Overall Completion</p>
+              <p
+                className="text-2xl font-bold leading-none mt-0.5"
+                style={{ color: "oklch(0.82 0.17 52)", letterSpacing: "-0.03em" }}
+              >
+                {overallPct}%
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Top stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="glass-card rounded-2xl p-5 border border-blue-800/30 bg-blue-950/10">
-          <div className="flex items-center gap-2 text-blue-400 mb-1">
-            <Users className="w-4 h-4" />
-            <span className="text-xs font-medium uppercase tracking-wider">
-              Teams
-            </span>
-          </div>
-          <p className="text-3xl font-bold text-foreground">{data.totalTeams}</p>
-          <p className="text-xs text-muted-foreground mt-1">Approved &amp; active</p>
-        </div>
-        <div className="glass-card rounded-2xl p-5 border border-green-800/30 bg-green-950/10">
-          <div className="flex items-center gap-2 text-green-400 mb-1">
-            <CheckCircle2 className="w-4 h-4" />
-            <span className="text-xs font-medium uppercase tracking-wider">
-              Members
-            </span>
-          </div>
-          <p className="text-3xl font-bold text-foreground">{data.totalMembers}</p>
-          <p className="text-xs text-muted-foreground mt-1">Total participants</p>
-        </div>
+      {/* ── Aggregate stats ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Active Teams", value: data.totalTeams, icon: Users, color: "oklch(0.72 0.18 185)" },
+          { label: "Participants", value: data.totalMembers, icon: CheckCircle2, color: "oklch(0.65 0.18 150)" },
+          {
+            label: "Pending Reg.",
+            value: data.pendingRegistrations.length,
+            icon: Clock,
+            color: "oklch(0.76 0.17 52)",
+          },
+          {
+            label: "Actions Logged",
+            value: data.registered + data.goodies + data.lunch + data.snacks,
+            icon: Activity,
+            color: "oklch(0.62 0.18 185)",
+          },
+        ].map((s) => {
+          const Icon = s.icon;
+          return (
+            <div
+              key={s.label}
+              className="vv-card rounded p-3.5"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="mono-label">{s.label}</span>
+                <Icon className="w-3.5 h-3.5" style={{ color: s.color }} />
+              </div>
+              <p
+                className="text-2xl font-bold leading-none"
+                style={{ color: "oklch(0.92 0.008 240)", letterSpacing: "-0.03em" }}
+              >
+                {s.value}
+              </p>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Activity progress */}
-      <div className="glass-card rounded-2xl p-6 space-y-5">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Distribution Progress
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      {/* ── Distribution progress ── */}
+      <div
+        className="rounded p-5"
+        style={{
+          background: "oklch(0.12 0.012 240)",
+          border: "1px solid oklch(0.20 0.012 240)",
+        }}
+      >
+        <p className="section-label mb-4">Distribution Progress</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {activityStats.map((stat) => {
             const Icon = stat.icon;
             return (
-              <div key={stat.label} className={`space-y-3 p-4 rounded-xl border ${stat.borderColor} bg-black/20`}>
-                <div className="flex items-center gap-2">
-                  <Icon className={`w-4 h-4 ${stat.color}`} />
-                  <span className="text-sm font-medium text-foreground">
+              <div key={stat.label}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon className="w-3.5 h-3.5" style={{ color: stat.color }} />
+                  <span
+                    className="text-sm font-medium"
+                    style={{ color: "oklch(0.75 0.01 240)" }}
+                  >
                     {stat.label}
                   </span>
                 </div>
-                <ProgressBar value={stat.value} total={data.totalMembers} />
+                <ProgressBar value={stat.value} total={data.totalMembers} color={stat.color} />
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Pending registrations */}
-      {data.pendingRegistrations.length > 0 && (
-        <div className="glass-card rounded-2xl p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-            <Clock className="w-4 h-4 text-yellow-400" />
-            Pending Registrations ({data.pendingRegistrations.length} teams)
-          </h2>
-          <div className="space-y-2">
-            {data.pendingRegistrations.slice(0, 10).map((team) => (
-              <div
-                key={team.id}
-                className="flex items-center justify-between py-2 px-3 rounded-lg bg-secondary/50 text-sm"
+      {/* ── Two-column bottom section ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Pending registrations */}
+        {data.pendingRegistrations.length > 0 && (
+          <div
+            className="rounded overflow-hidden"
+            style={{
+              background: "oklch(0.12 0.012 240)",
+              border: "1px solid oklch(0.20 0.012 240)",
+            }}
+          >
+            <div
+              className="flex items-center gap-2 px-4 py-3"
+              style={{ borderBottom: "1px solid oklch(0.185 0.012 240)" }}
+            >
+              <Clock className="w-3.5 h-3.5" style={{ color: "oklch(0.76 0.17 52)" }} />
+              <span className="section-label flex-1" style={{ gap: 0 }}>
+                Pending Registrations
+              </span>
+              <span
+                className="text-xs font-mono px-1.5 py-0.5 rounded"
+                style={{
+                  background: "oklch(0.76 0.17 52 / 0.1)",
+                  color: "oklch(0.82 0.17 52)",
+                  border: "1px solid oklch(0.76 0.17 52 / 0.3)",
+                }}
               >
-                <span className="text-foreground">{team.team_name}</span>
-                <span className="font-mono text-xs text-muted-foreground">
-                  {team.team_id}
-                </span>
-              </div>
-            ))}
-            {data.pendingRegistrations.length > 10 && (
-              <p className="text-xs text-muted-foreground text-center pt-1">
-                +{data.pendingRegistrations.length - 10} more teams pending
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Recent Audit Log */}
-      <div className="glass-card rounded-2xl p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Recent Activity Log
-        </h2>
-        {data.recentLogs.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">
-            No activity recorded yet.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {data.recentLogs.map((log) => {
-              const Icon = activityIcon(log.activity);
-              return (
-                <div
-                  key={log.id}
-                  className="flex items-center gap-3 py-2.5 px-3 rounded-xl bg-secondary/30 border border-border/50"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-4 h-4 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-foreground">
-                      <span className="font-medium">{log.performed_by_name}</span>
-                      {" marked "}
-                      <span className="text-primary font-medium">
-                        {activityLabel(log.activity)}
-                      </span>
-                    </p>
-                  </div>
-                  <time className="text-xs text-muted-foreground font-mono flex-shrink-0">
-                    {new Date(log.timestamp).toLocaleTimeString("en-IN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </time>
+                {data.pendingRegistrations.length}
+              </span>
+            </div>
+            <div>
+              {data.pendingRegistrations.slice(0, 8).map((team) => (
+                <div key={team.id} className="data-row">
+                  <span
+                    className="text-sm flex-1"
+                    style={{ color: "oklch(0.78 0.01 240)" }}
+                  >
+                    {team.team_name}
+                  </span>
+                  <span
+                    className="font-mono text-xs"
+                    style={{ color: "oklch(0.76 0.17 52)" }}
+                  >
+                    {team.team_id}
+                  </span>
                 </div>
-              );
-            })}
+              ))}
+              {data.pendingRegistrations.length > 8 && (
+                <div
+                  className="px-4 py-2.5 text-xs text-center"
+                  style={{ color: "oklch(0.42 0.018 240)" }}
+                >
+                  +{data.pendingRegistrations.length - 8} more teams pending
+                </div>
+              )}
+            </div>
           </div>
         )}
+
+        {/* Recent audit log */}
+        <div
+          className="rounded overflow-hidden"
+          style={{
+            background: "oklch(0.12 0.012 240)",
+            border: "1px solid oklch(0.20 0.012 240)",
+          }}
+        >
+          <div
+            className="flex items-center gap-2 px-4 py-3"
+            style={{ borderBottom: "1px solid oklch(0.185 0.012 240)" }}
+          >
+            <Activity className="w-3.5 h-3.5" style={{ color: "oklch(0.72 0.18 185)" }} />
+            <span className="section-label flex-1" style={{ gap: 0 }}>
+              Recent Activity Log
+            </span>
+            {data.recentLogs.length > 0 && (
+              <div className="flex items-center gap-1">
+                <div
+                  className="w-1.5 h-1.5 rounded-full animate-soft-pulse"
+                  style={{ background: "oklch(0.68 0.18 150)" }}
+                />
+                <span className="text-xs" style={{ color: "oklch(0.68 0.18 150)" }}>
+                  Live
+                </span>
+              </div>
+            )}
+          </div>
+
+          {data.recentLogs.length === 0 ? (
+            <div className="px-4 py-8 text-center">
+              <p className="text-sm" style={{ color: "oklch(0.42 0.018 240)" }}>
+                No activity recorded yet.
+              </p>
+            </div>
+          ) : (
+            <div>
+              {data.recentLogs.map((log) => {
+                const color = activityColor(log.activity);
+                return (
+                  <div key={log.id} className="data-row gap-3">
+                    <div
+                      className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0"
+                      style={{ background: `${color} / 0.1`, color }}
+                    >
+                      <ActivityIcon activity={log.activity} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs" style={{ color: "oklch(0.72 0.01 240)" }}>
+                        <span className="font-medium" style={{ color: "oklch(0.85 0.01 240)" }}>
+                          {log.performed_by_name}
+                        </span>
+                        {" — "}
+                        <span style={{ color }}>
+                          {activityLabel(log.activity)}
+                        </span>
+                      </p>
+                    </div>
+                    <time
+                      className="font-mono text-xs flex-shrink-0"
+                      style={{ color: "oklch(0.40 0.018 240)" }}
+                    >
+                      {new Date(log.timestamp).toLocaleTimeString("en-IN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </time>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
