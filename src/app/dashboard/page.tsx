@@ -13,7 +13,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-export const dynamic = 'force-dynamic';
+// Revalidate every 30 seconds — avoids re-fetching on every request
+export const revalidate = 30;
 
 export const metadata = {
   title: "Dashboard | ViceVerse Club Member Portal",
@@ -22,21 +23,26 @@ export const metadata = {
 async function getStats() {
   const supabase = await createClient();
 
-  const { data: members } = await supabase
-    .from("members")
-    .select("registration_status, goodies_status, lunch_status, snacks_status, team_id");
+  // Run all queries in parallel
+  const [membersRes, teamsRes, announcementsRes] = await Promise.all([
+    supabase
+      .from("members")
+      .select("registration_status, goodies_status, lunch_status, snacks_status, team_id"),
+    supabase
+      .from("teams")
+      .select("id")
+      .eq("payment_status", "approved"),
+    supabase
+      .from("announcements")
+      .select("id, title, message, created_at")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(3),
+  ]);
 
-  const { data: teams } = await supabase
-    .from("teams")
-    .select("id")
-    .eq("payment_status", "approved");
-
-  const { data: announcements } = await supabase
-    .from("announcements")
-    .select("id, title, message, created_at")
-    .eq("is_active", true)
-    .order("created_at", { ascending: false })
-    .limit(3);
+  const members = membersRes.data;
+  const teams = teamsRes.data;
+  const announcements = announcementsRes.data;
 
   const totalMembers = members?.length ?? 0;
   const totalTeams = teams?.length ?? 0;

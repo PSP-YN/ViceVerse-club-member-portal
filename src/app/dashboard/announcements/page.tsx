@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { Megaphone, Bell, Clock, Info } from "lucide-react";
 
-export const dynamic = 'force-dynamic';
+// Revalidate every 60 seconds — announcements don't change frequently
+export const revalidate = 60;
 
 export const metadata = {
   title: "Announcements | ViceVerse Club Member Portal",

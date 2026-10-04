@@ -10,7 +10,8 @@ import {
   UserCheck,
 } from "lucide-react";
 
-export const dynamic = 'force-dynamic';
+// Revalidate every 15 seconds — live monitoring needs fresher data
+export const revalidate = 15;
 
 export const metadata = {
   title: "Operations Status | ViceVerse Club Member Portal",
@@ -19,20 +20,25 @@ export const metadata = {
 async function getOperationsData() {
   const supabase = await createClient();
 
-  const { data: members } = await supabase
-    .from("members")
-    .select("id, name, team_id, registration_status, goodies_status, lunch_status, snacks_status");
+  // All three queries fire in parallel
+  const [membersRes, teamsRes, logsRes] = await Promise.all([
+    supabase
+      .from("members")
+      .select("id, name, team_id, registration_status, goodies_status, lunch_status, snacks_status"),
+    supabase
+      .from("teams")
+      .select("id, team_id, team_name")
+      .eq("payment_status", "approved"),
+    supabase
+      .from("audit_logs")
+      .select("id, performed_by_name, activity, timestamp, member_id")
+      .order("timestamp", { ascending: false })
+      .limit(15),
+  ]);
 
-  const { data: teams } = await supabase
-    .from("teams")
-    .select("id, team_id, team_name")
-    .eq("payment_status", "approved");
-
-  const { data: recentLogs } = await supabase
-    .from("audit_logs")
-    .select("id, performed_by_name, activity, timestamp, member_id")
-    .order("timestamp", { ascending: false })
-    .limit(15);
+  const members = membersRes.data;
+  const teams = teamsRes.data;
+  const recentLogs = logsRes.data;
 
   const totalMembers = members?.length ?? 0;
   const totalTeams = teams?.length ?? 0;

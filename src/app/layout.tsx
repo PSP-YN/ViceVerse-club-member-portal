@@ -1,11 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+// Use Next.js built-in font optimization — zero render blocking, self-hosted
+const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-inter",
   display: "swap",
+  preload: true,
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+  preload: false, // Only loaded when needed (code/IDs)
 });
 
 export const viewport: Viewport = {
@@ -29,15 +38,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className={`${geistMono.variable} antialiased min-h-screen`}>
+      <body className={`${inter.variable} ${jetbrainsMono.variable} antialiased min-h-screen`}>
         {children}
       </body>
     </html>
