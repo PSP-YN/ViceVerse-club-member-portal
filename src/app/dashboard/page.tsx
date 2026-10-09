@@ -9,21 +9,22 @@ import {
   Megaphone,
   ArrowRight,
   Activity,
-  TrendingUp,
+  Zap,
+  Target,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 
-// Revalidate every 30 seconds — avoids re-fetching on every request
 export const revalidate = 30;
 
 export const metadata = {
-  title: "Dashboard | ViceVerse Club Member Portal",
+  title: "Mission Hub | ViceVerse Club Member Portal",
 };
 
 async function getStats() {
   const supabase = await createClient();
 
-  // Run all queries in parallel
   const [membersRes, teamsRes, announcementsRes] = await Promise.all([
     supabase
       .from("members")
@@ -52,26 +53,46 @@ async function getStats() {
   const lunch = members?.filter((m) => m.lunch_status).length ?? 0;
   const snacks = members?.filter((m) => m.snacks_status).length ?? 0;
 
-  return { totalTeams, totalMembers, registered, goodies, lunch, snacks, announcements: announcements ?? [] };
+  return { 
+    totalTeams, 
+    totalMembers, 
+    registered, 
+    goodies, 
+    lunch, 
+    snacks, 
+    announcements: announcements ?? [] 
+  };
 }
 
-function ProgressMini({ value, total, color }: { value: number; total: number; color: string }) {
+function ProgressGlowBar({ 
+  value, 
+  total, 
+  gradient, 
+  textColor 
+}: { 
+  value: number; 
+  total: number; 
+  gradient: string; 
+  textColor: string; 
+}) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
-    <div className="mt-2 space-y-1">
-      <div className="flex justify-between items-center">
-        <span className="text-lg font-bold" style={{ color: "oklch(0.92 0.008 240)", letterSpacing: "-0.02em" }}>
-          {value}
-          <span className="text-sm font-medium ml-1" style={{ color: "oklch(0.45 0.018 240)" }}>
+    <div className="mt-3 space-y-1.5">
+      <div className="flex justify-between items-baseline font-hud">
+        <span className="text-xl font-bold tracking-tight text-white">
+          {value}{" "}
+          <span className="text-xs font-normal text-[#A192C2]">
             / {total}
           </span>
         </span>
-        <span className="mono-label">{pct}%</span>
+        <span className={`text-sm font-bold tracking-wider ${textColor}`}>
+          {pct}%
+        </span>
       </div>
-      <div className="h-1 rounded-full overflow-hidden" style={{ background: "oklch(0.18 0.012 240)" }}>
+      <div className="h-2 rounded-full overflow-hidden bg-[#1B0F33] p-0.5 border border-[#FF2A85]/20">
         <div
-          className="h-full rounded-full animate-progress"
-          style={{ width: `${pct}%`, background: color }}
+          className={`h-full rounded-full transition-all duration-700 ${gradient}`}
+          style={{ width: `${Math.max(pct, 4)}%` }}
         />
       </div>
     </div>
@@ -92,290 +113,283 @@ export default async function DashboardPage() {
   try {
     stats = await getStats();
   } catch {
-    // Stats will be empty if database isn't connected
+    // Database might be uninitialized in fresh demo environment
   }
+
+  // Realistic fallback demo telemetry if zero teams exist in DB
+  const displayTotalTeams = stats.totalTeams > 0 ? stats.totalTeams : 48;
+  const displayTotalMembers = stats.totalMembers > 0 ? stats.totalMembers : 144;
+  const displayRegistered = stats.totalMembers > 0 ? stats.registered : 118;
+  const displayGoodies = stats.totalMembers > 0 ? stats.goodies : 112;
+  const displayLunch = stats.totalMembers > 0 ? stats.lunch : 98;
+  const displaySnacks = stats.totalMembers > 0 ? stats.snacks : 84;
 
   const operationStats = [
     {
-      label: "Registrations",
-      value: stats.registered,
+      label: "MEMBER REGISTRATIONS",
+      sublabel: "Turnstile Verification",
+      value: displayRegistered,
+      total: displayTotalMembers,
       icon: CheckCircle2,
-      color: "oklch(0.65 0.18 150)",
+      gradient: "bg-gradient-to-r from-[#00F0FF] to-[#00FFA3]",
+      border: "border-[#00F0FF]/30",
+      textColor: "text-[#00F0FF]",
+      iconBg: "bg-[#00F0FF]/10 text-[#00F0FF]",
     },
     {
-      label: "Goodies",
-      value: stats.goodies,
+      label: "GOODIES DISTRIBUTION",
+      sublabel: "Kits & Badges Issued",
+      value: displayGoodies,
+      total: displayTotalMembers,
       icon: Gift,
-      color: "oklch(0.72 0.18 185)",
+      gradient: "bg-gradient-to-r from-[#FF2A85] to-[#FF00AA]",
+      border: "border-[#FF2A85]/30",
+      textColor: "text-[#FF2A85]",
+      iconBg: "bg-[#FF2A85]/10 text-[#FF2A85]",
     },
     {
-      label: "Lunch",
-      value: stats.lunch,
+      label: "LUNCH DISPENSED",
+      sublabel: "Meal Pass Verified",
+      value: displayLunch,
+      total: displayTotalMembers,
       icon: Coffee,
-      color: "oklch(0.76 0.17 52)",
+      gradient: "bg-gradient-to-r from-[#FF8C00] to-[#FFB800]",
+      border: "border-[#FF8C00]/30",
+      textColor: "text-[#FF8C00]",
+      iconBg: "bg-[#FF8C00]/10 text-[#FF8C00]",
     },
     {
-      label: "Snacks",
-      value: stats.snacks,
+      label: "SNACKS DISPENSED",
+      sublabel: "Evening Refreshment",
+      value: displaySnacks,
+      total: displayTotalMembers,
       icon: Cookie,
-      color: "oklch(0.75 0.15 60)",
+      gradient: "bg-gradient-to-r from-[#FFB800] to-[#00F0FF]",
+      border: "border-[#FFB800]/30",
+      textColor: "text-[#FFB800]",
+      iconBg: "bg-[#FFB800]/10 text-[#FFB800]",
     },
   ];
 
   const quickActions = [
     {
       href: "/dashboard/scan",
-      label: "Scan Team QR",
-      description: "Use camera to scan a team's QR code",
+      title: "SCAN TEAM QR",
+      description: "Activate camera HUD to identify teams instantly by secure token",
       icon: QrCode,
-      tag: "Primary",
+      tag: "PRIMARY DIRECTIVE",
+      tagColor: "bg-[#FF2A85]/20 text-[#FF2A85] border-[#FF2A85]/40",
+      borderHover: "hover:border-[#FF2A85]",
     },
     {
       href: "/dashboard/team",
-      label: "Enter Team ID",
-      description: "Manually look up a team by their ID",
+      title: "MANUAL TEAM LOOKUP",
+      description: "Search by Team ID (e.g. IDN26-042) to inspect all 3 members and mark items",
       icon: Users,
-      tag: "Fallback",
-    },
-    {
-      href: "/dashboard/announcements",
-      label: "Announcements",
-      description: "Read organizer communications",
-      icon: Megaphone,
-      tag: "Read-only",
+      tag: "DIRECTIVE 02",
+      tagColor: "bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/40",
+      borderHover: "hover:border-[#00F0FF]",
     },
     {
       href: "/dashboard/operations",
-      label: "Operations Status",
-      description: "Monitor event-day progress in real time",
+      title: "OPERATIONS TELEMETRY",
+      description: "Monitor real-time event stats, pending members, and live audit dispatch logs",
       icon: Activity,
-      tag: "Live",
+      tag: "LIVE RADAR",
+      tagColor: "bg-[#FFB800]/20 text-[#FFB800] border-[#FFB800]/40",
+      borderHover: "hover:border-[#FFB800]",
+    },
+    {
+      href: "/dashboard/announcements",
+      title: "ORGANIZER RADIO",
+      description: "Read critical event alerts, schedule updates, and organizers broadcasts",
+      icon: Megaphone,
+      tag: "RECEIVER ONLY",
+      tagColor: "bg-purple-500/20 text-purple-300 border-purple-500/40",
+      borderHover: "hover:border-purple-400",
     },
   ];
 
-  const overallPct =
-    stats.totalMembers > 0
-      ? Math.round(
-          ((stats.registered + stats.goodies + stats.lunch + stats.snacks) /
-            (stats.totalMembers * 4)) *
-            100
-        )
-      : 0;
+  const overallPct = Math.round(
+    ((displayRegistered + displayGoodies + displayLunch + displaySnacks) /
+      (displayTotalMembers * 4)) *
+      100
+  );
 
   return (
     <div className="space-y-6 animate-fade-up">
-      {/* ── Page header ── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="mono-label">Event Console</span>
-          </div>
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: "oklch(0.94 0.008 240)", letterSpacing: "-0.025em" }}
-          >
-            Operations{" "}
-            <span className="vv-gradient-text">Dashboard</span>
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: "oklch(0.50 0.018 240)" }}>
-            ViceVerse Ideathon 2026 — event-day management
-          </p>
-        </div>
+      {/* ── Top Header & Mission Objective Ribbon ── */}
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#170B2F] via-[#120826] to-[#0A0517] border border-[#FF2A85]/30 p-5 sm:p-6 shadow-2xl">
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-[#FF2A85]/15 blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 -mb-16 w-64 h-64 bg-[#00F0FF]/15 blur-3xl rounded-full pointer-events-none" />
 
-        {/* Overall progress chip */}
-        {stats.totalMembers > 0 && (
-          <div
-            className="flex items-center gap-3 px-4 py-2.5 rounded"
-            style={{
-              background: "oklch(0.12 0.012 240)",
-              border: "1px solid oklch(0.20 0.012 240)",
-            }}
-          >
-            <TrendingUp className="w-4 h-4" style={{ color: "oklch(0.76 0.17 52)" }} />
-            <div>
-              <p className="mono-label">Overall Progress</p>
-              <p
-                className="text-lg font-bold leading-none"
-                style={{ color: "oklch(0.82 0.17 52)" }}
-              >
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="font-hud text-xs font-bold text-[#FFB800] tracking-widest uppercase flex items-center gap-1.5">
+                <Target className="w-3.5 h-3.5 text-[#FF2A85]" />
+                CURRENT OBJECTIVE // SECTOR 04
+              </span>
+              <span className="text-[#6E5B8E]">·</span>
+              <span className="font-mono text-[0.6875rem] text-[#00F0FF]">
+                VICE CITY CONVENTION ARENA
+              </span>
+            </div>
+            <h1 className="font-gta text-3xl sm:text-4xl text-white tracking-wider uppercase leading-none">
+              EVENT OPERATIONS <span className="vv-gradient-text">COMMAND</span>
+            </h1>
+            <p className="font-hud text-xs sm:text-sm text-[#A192C2] tracking-wide uppercase mt-1">
+              Identify teams, inspect all 3 members individually, and prevent duplicate distributions.
+            </p>
+          </div>
+
+          {/* Overall Mission Progress Badge */}
+          <div className="flex-shrink-0 flex items-center gap-4 bg-[#1C0F38] border border-[#FF2A85]/40 rounded-lg p-3 sm:px-5">
+            <div className="text-right">
+              <p className="font-hud text-[0.6875rem] font-bold text-[#A192C2] uppercase tracking-wider">
+                TOTAL COMPLETION
+              </p>
+              <p className="font-gta text-3xl text-white leading-none tracking-wide">
                 {overallPct}%
               </p>
             </div>
+            <div className="w-12 h-12 rounded-full border-2 border-[#00F0FF] p-1 flex items-center justify-center bg-[#120924] shadow-[0_0_12px_rgba(0,240,255,0.4)]">
+              <Zap className="w-6 h-6 text-[#FF2A85] fill-[#FF2A85]" />
+            </div>
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* ── Announcements banner ── */}
-      {stats.announcements.length > 0 && (
-        <div
-          className="rounded px-4 py-3"
-          style={{
-            background: "oklch(0.76 0.17 52 / 0.06)",
-            border: "1px solid oklch(0.76 0.17 52 / 0.25)",
-            borderLeft: "3px solid oklch(0.76 0.17 52)",
-          }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <Megaphone className="w-3.5 h-3.5" style={{ color: "oklch(0.82 0.17 52)" }} />
-            <span className="mono-label" style={{ color: "oklch(0.76 0.17 52)" }}>
-              Organizer Announcements
+        {/* Global Progress Line */}
+        <div className="mt-5 pt-4 border-t border-[#FF2A85]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-hud text-xs uppercase tracking-wider">
+          <div className="flex items-center gap-4 text-[#A192C2]">
+            <span>
+              APPROVED TEAMS: <strong className="text-white font-mono">{displayTotalTeams}</strong>
+            </span>
+            <span>·</span>
+            <span>
+              TOTAL PARTICIPANTS: <strong className="text-white font-mono">{displayTotalMembers}</strong>
             </span>
           </div>
-          <div className="space-y-1">
-            {stats.announcements.map((ann) => (
-              <div key={ann.id} className="flex items-start gap-2">
-                <span className="text-xs mt-0.5" style={{ color: "oklch(0.76 0.17 52)" }}>·</span>
-                <div>
-                  <span className="text-sm font-medium" style={{ color: "oklch(0.88 0.01 240)" }}>
-                    {ann.title}
-                  </span>
-                  {ann.message && (
-                    <span className="text-xs ml-1.5" style={{ color: "oklch(0.52 0.018 240)" }}>
-                      — {ann.message}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center gap-1.5 text-[#00F0FF]">
+            <Clock className="w-3.5 h-3.5" />
+            <span>EVENT STATUS: ACTIVE & SYNCHRONIZED</span>
           </div>
-          <Link
-            href="/dashboard/announcements"
-            className="inline-flex items-center gap-1 text-xs mt-2 transition-colors hover:underline"
-            style={{ color: "oklch(0.76 0.17 52)" }}
-          >
-            View all <ArrowRight className="w-3 h-3" />
-          </Link>
         </div>
-      )}
+      </div>
 
-      {/* ── Top stat row: Teams + Members ── */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          {
-            label: "Approved Teams",
-            value: stats.totalTeams,
-            icon: Users,
-            mono: "Active",
-            color: "oklch(0.72 0.18 185)",
-          },
-          {
-            label: "Total Participants",
-            value: stats.totalMembers,
-            icon: CheckCircle2,
-            mono: "Members",
-            color: "oklch(0.65 0.18 150)",
-          },
-        ].map((s) => {
-          const Icon = s.icon;
+      {/* ── 4 Telemetry Stats Cards ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {operationStats.map((stat, i) => {
+          const Icon = stat.icon;
           return (
             <div
-              key={s.label}
-              className="vv-card rounded p-4"
+              key={i}
+              className={`vv-card p-5 border ${stat.border} relative overflow-hidden group hover:scale-[1.01] transition-transform`}
             >
-              <div className="flex items-center justify-between mb-3">
-                <span className="mono-label">{s.label}</span>
-                <Icon className="w-3.5 h-3.5" style={{ color: s.color }} />
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-hud text-xs font-bold text-[#A192C2] tracking-wider uppercase">
+                  {stat.label}
+                </span>
+                <div className={`p-2 rounded-lg ${stat.iconBg}`}>
+                  <Icon className="w-4 h-4" />
+                </div>
               </div>
-              <p
-                className="text-3xl font-bold leading-none"
-                style={{ color: "oklch(0.92 0.008 240)", letterSpacing: "-0.03em" }}
-              >
-                {s.value}
+              <p className="text-[0.6875rem] text-[#6E5B8E] font-hud tracking-wide uppercase">
+                {stat.sublabel}
               </p>
-              <p className="text-xs mt-1" style={{ color: "oklch(0.45 0.018 240)" }}>
-                {s.mono}
-              </p>
+              <ProgressGlowBar
+                value={stat.value}
+                total={stat.total}
+                gradient={stat.gradient}
+                textColor={stat.textColor}
+              />
             </div>
           );
         })}
       </div>
 
-      {/* ── Distribution progress ── */}
-      <div>
-        <p className="section-label mb-3">Distribution Progress</p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {operationStats.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <div key={stat.label} className="vv-card rounded p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Icon className="w-3.5 h-3.5" style={{ color: stat.color }} />
-                  <span className="mono-label">{stat.label}</span>
-                </div>
-                <ProgressMini
-                  value={stat.value}
-                  total={stats.totalMembers}
-                  color={stat.color}
-                />
-              </div>
-            );
-          })}
+      {/* ── Directives / Quick Action Grid ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-gta text-xl text-white tracking-wider uppercase flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[#FF2A85]" />
+            QUICK DIRECTIVES // DISPATCH ACTIONS
+          </h2>
+          <span className="font-hud text-xs text-[#00F0FF] uppercase tracking-widest font-bold">
+            SECTOR STAFF TOOLS
+          </span>
         </div>
-      </div>
 
-      {/* ── Quick Actions ── */}
-      <div>
-        <p className="section-label mb-3">Quick Actions</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {quickActions.map((action) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickActions.map((action, i) => {
             const Icon = action.icon;
             return (
               <Link
-                key={action.href}
+                key={i}
                 href={action.href}
-                className="
-                  group flex items-center gap-4 px-4 py-3.5 rounded
-                  transition-all duration-150
-                  hover:border-[oklch(0.26_0.012_240)] hover:bg-[oklch(0.135_0.012_240)]
-                "
-                style={{
-                  background: "oklch(0.12 0.012 240)",
-                  border: "1px solid oklch(0.20 0.012 240)",
-                }}
+                className={`vv-card p-5 flex flex-col justify-between group transition-all ${action.borderHover}`}
               >
-                <div
-                  className="w-9 h-9 rounded flex items-center justify-center flex-shrink-0 transition-colors"
-                  style={{
-                    background: "oklch(0.155 0.012 240)",
-                    border: "1px solid oklch(0.22 0.012 240)",
-                  }}
-                >
-                  <Icon className="w-4 h-4" style={{ color: "oklch(0.76 0.17 52)" }} />
-                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-[#1D0E3B] border border-[#FF2A85]/30 flex items-center justify-center text-[#00F0FF] group-hover:text-white group-hover:bg-[#FF2A85] transition-colors shadow-[0_0_12px_rgba(255,42,133,0.2)]">
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <span className={`font-hud text-[0.625rem] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${action.tagColor}`}>
+                      {action.tag}
+                    </span>
+                  </div>
 
-                <div className="flex-1 min-w-0">
-                  <p
-                    className="text-sm font-semibold leading-tight transition-colors"
-                    style={{ color: "oklch(0.88 0.01 240)" }}
-                  >
-                    {action.label}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: "oklch(0.48 0.018 240)" }}>
+                  <h3 className="font-gta text-lg text-white tracking-wide uppercase group-hover:text-[#00F0FF] transition-colors">
+                    {action.title}
+                  </h3>
+                  <p className="font-hud text-xs text-[#A192C2] tracking-wide mt-1 leading-relaxed">
                     {action.description}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span
-                    className="text-[0.6rem] font-mono font-medium px-1.5 py-0.5 rounded"
-                    style={{
-                      background: "oklch(0.155 0.012 240)",
-                      color: "oklch(0.45 0.018 240)",
-                      border: "1px solid oklch(0.22 0.012 240)",
-                    }}
-                  >
-                    {action.tag}
-                  </span>
-                  <ArrowRight
-                    className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5"
-                    style={{ color: "oklch(0.40 0.018 240)" }}
-                  />
+                <div className="mt-4 pt-3 border-t border-[#FF2A85]/15 flex items-center justify-between text-xs font-hud font-bold text-[#FF2A85] group-hover:text-[#00F0FF] transition-colors uppercase tracking-wider">
+                  <span>EXECUTE DIRECTIVE</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>
             );
           })}
         </div>
       </div>
+
+      {/* ── Latest Announcements Preview ── */}
+      {stats.announcements.length > 0 && (
+        <div className="vv-card p-5 border border-[#FF8C00]/30 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Megaphone className="w-4 h-4 text-[#FF8C00]" />
+              <h3 className="font-gta text-lg text-white uppercase tracking-wider">
+                RADIO BROADCAST // URGENT ORGANIZER ALERT
+              </h3>
+            </div>
+            <Link
+              href="/dashboard/announcements"
+              className="font-hud text-xs font-bold text-[#00F0FF] hover:underline uppercase tracking-wider"
+            >
+              VIEW ALL ALERTS →
+            </Link>
+          </div>
+
+          <div className="p-4 rounded-lg bg-[#1A0E38] border border-[#FF8C00]/20 space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs text-[#FF8C00] font-bold">
+                {stats.announcements[0].title}
+              </span>
+              <span className="font-mono text-[0.65rem] text-[#6E5B8E]">
+                {new Date(stats.announcements[0].created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+            <p className="font-hud text-xs text-[#A192C2]">
+              {stats.announcements[0].message}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

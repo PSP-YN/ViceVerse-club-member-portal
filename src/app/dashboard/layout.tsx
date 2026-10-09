@@ -13,73 +13,45 @@ import {
   Menu,
   X,
   ChevronRight,
+  Radio,
+  Zap,
 } from "lucide-react";
 import { useState } from "react";
+import ViceVerseLogo from "@/components/ViceVerseLogo";
 
 const navItems = [
   {
     href: "/dashboard",
-    label: "Dashboard",
+    label: "Mission Hub",
+    sublabel: "Overview & Metrics",
     icon: LayoutDashboard,
     exact: true,
-    description: "Overview",
   },
   {
     href: "/dashboard/scan",
-    label: "Scan Team QR",
+    label: "Target QR Scan",
+    sublabel: "HUD Camera Scanner",
     icon: QrCode,
-    description: "Camera scanner",
   },
   {
     href: "/dashboard/team",
-    label: "Team Lookup",
+    label: "Team Dossier",
+    sublabel: "Manual Lookup & Acts",
     icon: Users,
-    description: "Manual search",
-  },
-  {
-    href: "/dashboard/announcements",
-    label: "Announcements",
-    icon: Megaphone,
-    description: "Organizer alerts",
   },
   {
     href: "/dashboard/operations",
-    label: "Operations",
+    label: "Operations Dispatch",
+    sublabel: "Live Telemetry & Logs",
     icon: BarChart3,
-    description: "Live monitoring",
+  },
+  {
+    href: "/dashboard/announcements",
+    label: "Radio Alerts",
+    sublabel: "Organizer Broadcasts",
+    icon: Megaphone,
   },
 ];
-
-/* ── ViceVerse hex logo mark ── */
-function HexLogo({ size = 28 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 36 36" fill="none" aria-hidden="true">
-      <polygon
-        points="18,2 34,10 34,26 18,34 2,26 2,10"
-        fill="none"
-        stroke="oklch(0.76 0.17 52)"
-        strokeWidth="1.5"
-      />
-      <polygon
-        points="18,8 28,13.5 28,24.5 18,30 8,24.5 8,13.5"
-        fill="oklch(0.76 0.17 52 / 0.08)"
-        stroke="oklch(0.76 0.17 52 / 0.35)"
-        strokeWidth="1"
-      />
-      <text
-        x="18"
-        y="22"
-        textAnchor="middle"
-        fill="oklch(0.82 0.17 52)"
-        fontSize="10"
-        fontWeight="700"
-        fontFamily="Inter"
-      >
-        V
-      </text>
-    </svg>
-  );
-}
 
 export default function DashboardLayout({
   children,
@@ -92,7 +64,12 @@ export default function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // ignore
+    }
+    document.cookie = "vv_demo_auth=; path=/; max-age=0; SameSite=Lax";
     router.push("/login");
     router.refresh();
   }
@@ -104,13 +81,28 @@ export default function DashboardLayout({
 
   const NavContent = ({ onClose }: { onClose?: () => void }) => (
     <div className="flex flex-col flex-1 overflow-hidden">
+      {/* Wanted level status banner */}
+      <div className="px-4 py-2 mb-2 bg-[#170B2F] border-y border-[#FF2A85]/20 flex items-center justify-between">
+        <span className="font-hud text-[0.6875rem] font-bold text-[#FFB800] uppercase tracking-wider flex items-center gap-1">
+          <Zap className="w-3 h-3 text-[#FFB800] fill-current" />
+          CREW LEVEL 5
+        </span>
+        <div className="flex gap-0.5 text-[#FFB800] text-[0.65rem]">
+          {[...Array(5)].map((_, i) => (
+            <span key={i} className="drop-shadow-[0_0_4px_rgba(255,184,0,0.8)]">★</span>
+          ))}
+        </div>
+      </div>
+
       {/* Nav section label */}
       <div className="px-4 pb-2 pt-1">
-        <p className="mono-label">Navigation</p>
+        <p className="font-hud text-[0.6875rem] font-bold text-[#00F0FF] tracking-[0.16em] uppercase">
+          OPERATIONAL DIRECTIVES
+        </p>
       </div>
 
       <nav
-        className="flex-1 px-2 space-y-0.5 overflow-y-auto"
+        className="flex-1 px-3 space-y-1.5 overflow-y-auto"
         role="navigation"
         aria-label="Main navigation"
       >
@@ -123,32 +115,30 @@ export default function DashboardLayout({
               href={item.href}
               onClick={onClose}
               className={`
-                flex items-center gap-3 px-3 py-2.5 rounded text-sm font-medium
+                flex items-center gap-3 px-3 py-2.5 rounded text-sm font-hud font-bold tracking-wide uppercase
                 transition-all duration-150 group relative
                 ${active
-                  ? "nav-active"
-                  : "text-[oklch(0.52_0.018_240)] hover:text-[oklch(0.85_0.01_240)] hover:bg-[oklch(0.155_0.012_240)]"
+                  ? "bg-gradient-to-r from-[#FF2A85]/25 to-transparent text-[#FF2A85] border-l-4 border-[#FF2A85] shadow-[inset_0_0_15px_rgba(255,42,133,0.12)]"
+                  : "text-[#A192C2] hover:text-white hover:bg-[#1B1038] hover:border-l-2 hover:border-[#00F0FF]"
                 }
               `}
               aria-current={active ? "page" : undefined}
             >
               <Icon
                 className={`w-4 h-4 flex-shrink-0 transition-colors ${
-                  active ? "text-[oklch(0.82_0.17_52)]" : "text-[oklch(0.45_0.018_240)] group-hover:text-[oklch(0.75_0.01_240)]"
+                  active ? "text-[#00F0FF] drop-shadow-[0_0_8px_rgba(0,240,255,0.8)]" : "text-[#A192C2] group-hover:text-[#00F0FF]"
                 }`}
               />
               <div className="flex-1 min-w-0">
-                <span className={`block leading-tight ${active ? "text-[oklch(0.82_0.17_52)]" : ""}`}>
+                <span className={`block leading-tight ${active ? "text-white font-gta text-base tracking-wider" : ""}`}>
                   {item.label}
                 </span>
-                {!active && (
-                  <span className="block text-[0.65rem] text-[oklch(0.40_0.012_240)] leading-tight mt-0.5">
-                    {item.description}
-                  </span>
-                )}
+                <span className="block text-[0.65rem] text-[#6E5B8E] group-hover:text-[#A192C2] font-hud tracking-normal lowercase leading-tight">
+                  {item.sublabel}
+                </span>
               </div>
               {active && (
-                <ChevronRight className="w-3 h-3 text-[oklch(0.76_0.17_52)] flex-shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 text-[#00F0FF] flex-shrink-0 animate-pulse" />
               )}
             </Link>
           );
@@ -156,25 +146,23 @@ export default function DashboardLayout({
       </nav>
 
       {/* Bottom section: logout + build info */}
-      <div
-        className="px-2 pb-4 pt-3 mt-2"
-        style={{ borderTop: "1px solid oklch(0.18 0.012 240)" }}
-      >
+      <div className="px-3 pb-4 pt-3 mt-2 border-t border-[#FF2A85]/20 bg-[#0C061A]">
         <button
           id="logout-btn"
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded text-sm font-medium
-            text-[oklch(0.45_0.018_240)] hover:text-[oklch(0.68_0.22_22)]
-            hover:bg-[oklch(0.58_0.22_22_/_0.08)] transition-all"
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded font-hud font-bold text-xs uppercase tracking-wider
+            text-[#A192C2] hover:text-[#FF2244] hover:bg-[#FF2244]/10 hover:border hover:border-[#FF2244]/40 transition-all"
         >
           <LogOut className="w-4 h-4 flex-shrink-0" />
-          Sign Out
+          ABORT SHIFT (LOGOUT)
         </button>
 
-        <div className="mt-3 px-3">
-          <p className="mono-label mb-0.5">Build</p>
-          <p className="text-xs" style={{ color: "oklch(0.35 0.012 240)" }}>
-            ViceVerse v2.0 · Team 4
+        <div className="mt-3 px-3 py-2 rounded bg-[#130926] border border-[#FF2A85]/15">
+          <p className="font-hud text-[0.65rem] font-bold text-[#00F0FF] uppercase tracking-wider">
+            VICE CITY CREW // TEAM 4
+          </p>
+          <p className="font-mono text-[0.65rem] text-[#A192C2] mt-0.5">
+            Puttashankar · Prasiddh · Bidappa
           </p>
         </div>
       </div>
@@ -182,46 +170,25 @@ export default function DashboardLayout({
   );
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-[#090514] text-slate-100">
       {/* ── Desktop Sidebar ── */}
-      <aside
-        className="hidden lg:flex w-56 flex-col fixed inset-y-0 left-0 z-40"
-        style={{
-          background: "oklch(0.105 0.012 240)",
-          borderRight: "1px solid oklch(0.185 0.012 240)",
-        }}
-      >
+      <aside className="hidden lg:flex w-64 flex-col fixed inset-y-0 left-0 z-40 bg-[#0C061A] border-r border-[#FF2A85]/20 shadow-[4px_0_24px_rgba(0,0,0,0.6)]">
         {/* Logo area */}
-        <div
-          className="flex items-center gap-3 px-4 py-4"
-          style={{ borderBottom: "1px solid oklch(0.185 0.012 240)" }}
-        >
-          <HexLogo size={30} />
-          <div className="min-w-0">
-            <p
-              className="text-sm font-bold leading-tight"
-              style={{ color: "oklch(0.92 0.008 240)", letterSpacing: "-0.02em" }}
-            >
-              ViceVerse
-            </p>
-            <p className="text-xs leading-tight" style={{ color: "oklch(0.45 0.018 240)" }}>
-              Club Member Portal
-            </p>
-          </div>
+        <div className="p-4 border-b border-[#FF2A85]/20 bg-[#120826]">
+          <ViceVerseLogo size="md" showSubtitle={true} />
         </div>
 
-        {/* Status chip */}
-        <div className="px-4 py-2.5" style={{ borderBottom: "1px solid oklch(0.185 0.012 240)" }}>
-          <div
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded"
-            style={{
-              background: "oklch(0.65 0.18 150 / 0.08)",
-              border: "1px solid oklch(0.65 0.18 150 / 0.2)",
-            }}
-          >
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-soft-pulse flex-shrink-0" />
-            <span className="text-xs font-medium" style={{ color: "oklch(0.68 0.18 150)" }}>
-              Ideathon — Live
+        {/* Live Status Chip */}
+        <div className="px-4 py-2.5 border-b border-[#FF2A85]/20 bg-[#0E0720]">
+          <div className="flex items-center justify-between px-2.5 py-1.5 rounded bg-[#1A0E38] border border-[#00F0FF]/30">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#00F0FF] animate-ping" />
+              <span className="font-hud text-xs font-bold text-[#00F0FF] uppercase tracking-wider">
+                RADAR ACTIVE
+              </span>
+            </div>
+            <span className="font-mono text-[0.65rem] text-[#FFB800] bg-[#FFB800]/10 px-1.5 py-0.5 rounded">
+              LIVE OPS
             </span>
           </div>
         </div>
@@ -236,39 +203,20 @@ export default function DashboardLayout({
         <div className="lg:hidden fixed inset-0 z-50 flex">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/70"
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
           />
           {/* Drawer */}
-          <aside
-            className="relative z-10 w-60 flex flex-col shadow-2xl"
-            style={{
-              background: "oklch(0.105 0.012 240)",
-              borderRight: "1px solid oklch(0.185 0.012 240)",
-            }}
-          >
-            <div
-              className="flex items-center justify-between px-4 py-4"
-              style={{ borderBottom: "1px solid oklch(0.185 0.012 240)" }}
-            >
-              <div className="flex items-center gap-2.5">
-                <HexLogo size={26} />
-                <div>
-                  <p className="text-sm font-bold" style={{ color: "oklch(0.92 0.008 240)" }}>
-                    ViceVerse
-                  </p>
-                  <p className="text-xs" style={{ color: "oklch(0.45 0.018 240)" }}>
-                    Club Member
-                  </p>
-                </div>
-              </div>
+          <aside className="relative z-10 w-72 flex flex-col bg-[#0C061A] border-r border-[#FF2A85]/30 shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-[#FF2A85]/20 bg-[#120826]">
+              <ViceVerseLogo size="sm" showSubtitle={false} />
               <button
                 onClick={() => setMobileOpen(false)}
-                className="p-1.5 rounded hover:bg-[oklch(0.155_0.012_240)] transition-colors"
+                className="p-1.5 rounded bg-[#1B1038] text-[#A192C2] hover:text-white hover:bg-[#FF2A85]/20 transition-colors"
                 aria-label="Close navigation"
               >
-                <X className="w-4 h-4" style={{ color: "oklch(0.55 0.018 240)" }} />
+                <X className="w-5 h-5 text-[#00F0FF]" />
               </button>
             </div>
 
@@ -279,52 +227,28 @@ export default function DashboardLayout({
         </div>
       )}
 
-      {/* ── Main Content ── */}
-      <main className="flex-1 lg:ml-56 flex flex-col min-h-screen">
-        {/* Mobile header */}
-        <header
-          className="lg:hidden sticky top-0 z-30 flex items-center gap-3 px-4 h-14"
-          style={{
-            background: "oklch(0.105 0.012 240 / 0.9)",
-            borderBottom: "1px solid oklch(0.185 0.012 240)",
-            backdropFilter: "blur(12px)",
-          }}
-        >
+      {/* ── Main Content Area ── */}
+      <main className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+        {/* Mobile Header */}
+        <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 h-16 bg-[#0C061A]/95 border-b border-[#FF2A85]/20 backdrop-blur-md">
           <button
             onClick={() => setMobileOpen(true)}
-            className="p-2 -ml-1 rounded hover:bg-[oklch(0.155_0.012_240)] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-            aria-label="Open navigation"
+            className="p-2 rounded bg-[#1A0E38] border border-[#FF2A85]/30 text-[#00F0FF] flex items-center justify-center hover:bg-[#FF2A85]/20 transition-colors"
+            aria-label="Open navigation menu"
           >
-            <Menu className="w-5 h-5" style={{ color: "oklch(0.60 0.018 240)" }} />
+            <Menu className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center gap-2">
-            <HexLogo size={22} />
-            <span
-              className="text-sm font-bold"
-              style={{ color: "oklch(0.90 0.008 240)", letterSpacing: "-0.02em" }}
-            >
-              ViceVerse
-            </span>
-          </div>
+          <ViceVerseLogo size="sm" showSubtitle={false} />
 
-          <div className="ml-auto flex items-center gap-2">
-            <div
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium"
-              style={{
-                background: "oklch(0.65 0.18 150 / 0.08)",
-                border: "1px solid oklch(0.65 0.18 150 / 0.2)",
-                color: "oklch(0.68 0.18 150)",
-              }}
-            >
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-soft-pulse" />
-              Live
-            </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1A0E38] border border-[#00F0FF]/40 text-[#00F0FF] font-hud text-xs font-bold uppercase tracking-wider">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#00F0FF] animate-ping" />
+            LIVE
           </div>
         </header>
 
-        {/* Page content */}
-        <div className="flex-1 p-4 lg:p-6 xl:p-8 max-w-[1200px] w-full">
+        {/* Page Content Container */}
+        <div className="flex-1 p-4 lg:p-6 xl:p-8 max-w-[1300px] w-full mx-auto space-y-6">
           {children}
         </div>
       </main>

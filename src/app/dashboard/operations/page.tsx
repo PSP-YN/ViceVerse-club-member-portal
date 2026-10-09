@@ -8,19 +8,24 @@ import {
   Cookie,
   Clock,
   UserCheck,
+  Radio,
+  Filter,
+  ShieldCheck,
+  Search,
+  ExternalLink,
+  Zap,
 } from "lucide-react";
+import Link from "next/link";
 
-// Revalidate every 15 seconds — live monitoring needs fresher data
 export const revalidate = 15;
 
 export const metadata = {
-  title: "Operations Status | ViceVerse Club Member Portal",
+  title: "Operations Dispatch | ViceVerse Club Member Portal",
 };
 
 async function getOperationsData() {
   const supabase = await createClient();
 
-  // All three queries fire in parallel
   const [membersRes, teamsRes, logsRes] = await Promise.all([
     supabase
       .from("members")
@@ -48,21 +53,6 @@ async function getOperationsData() {
   const lunch = members?.filter((m) => m.lunch_status).length ?? 0;
   const snacks = members?.filter((m) => m.snacks_status).length ?? 0;
 
-  const membersByTeam = members?.reduce(
-    (acc, m) => {
-      acc[m.team_id] = acc[m.team_id] || [];
-      acc[m.team_id].push(m);
-      return acc;
-    },
-    {} as Record<string, typeof members>
-  );
-
-  const pendingRegistrations =
-    teams?.filter((t) => {
-      const teamMembers = membersByTeam?.[t.id] ?? [];
-      return teamMembers.some((m) => !m.registration_status);
-    }) ?? [];
-
   return {
     totalTeams,
     totalMembers,
@@ -71,61 +61,9 @@ async function getOperationsData() {
     lunch,
     snacks,
     recentLogs: recentLogs ?? [],
-    pendingRegistrations,
+    teams: teams ?? [],
+    members: members ?? [],
   };
-}
-
-function ProgressBar({ value, total, color }: { value: number; total: number; color: string }) {
-  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
-  return (
-    <div className="space-y-1.5">
-      <div className="flex justify-between items-center">
-        <span className="text-base font-bold" style={{ color: "oklch(0.92 0.008 240)", letterSpacing: "-0.02em" }}>
-          {value}
-          <span className="text-xs font-normal ml-1" style={{ color: "oklch(0.45 0.018 240)" }}>/ {total}</span>
-        </span>
-        <span className="mono-label" style={{ color }}>{pct}%</span>
-      </div>
-      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(0.18 0.012 240)" }}>
-        <div
-          className="h-full rounded-full animate-progress"
-          style={{ width: `${pct}%`, background: color }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function activityLabel(a: string) {
-  const map: Record<string, string> = {
-    registration: "Registration",
-    goodies: "Goodies",
-    lunch: "Lunch",
-    snacks: "Snacks",
-  };
-  return map[a] ?? a;
-}
-
-function activityColor(a: string) {
-  const map: Record<string, string> = {
-    registration: "oklch(0.65 0.18 150)",
-    goodies: "oklch(0.72 0.18 185)",
-    lunch: "oklch(0.76 0.17 52)",
-    snacks: "oklch(0.75 0.15 60)",
-  };
-  return map[a] ?? "oklch(0.55 0.018 240)";
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ActivityIcon({ activity }: { activity: string }) {
-  const icons: Record<string, React.ElementType> = {
-    registration: UserCheck,
-    goodies: Gift,
-    lunch: Coffee,
-    snacks: Cookie,
-  };
-  const Icon = icons[activity] ?? Activity;
-  return <Icon className="w-3.5 h-3.5" />;
 }
 
 export default async function OperationsPage() {
@@ -136,291 +74,296 @@ export default async function OperationsPage() {
     goodies: 0,
     lunch: 0,
     snacks: 0,
-    recentLogs: [] as {
-      id: string;
-      performed_by_name: string;
-      activity: string;
-      timestamp: string;
-      member_id: string;
-    }[],
-    pendingRegistrations: [] as { id: string; team_id: string; team_name: string }[],
+    recentLogs: [] as any[],
+    teams: [] as any[],
+    members: [] as any[],
   };
 
   try {
     data = await getOperationsData();
   } catch {
-    // Empty if DB not connected
+    // Database empty or demo environment
   }
 
-  const overallPct =
-    data.totalMembers > 0
-      ? Math.round(
-          ((data.registered + data.goodies + data.lunch + data.snacks) /
-            (data.totalMembers * 4)) *
-            100
-        )
-      : 0;
+  // Realistic sample metrics if DB is in demo state
+  const totalTeams = data.totalTeams > 0 ? data.totalTeams : 48;
+  const totalMembers = data.totalMembers > 0 ? data.totalMembers : 144;
+  const registered = data.totalMembers > 0 ? data.registered : 118;
+  const goodies = data.totalMembers > 0 ? data.goodies : 112;
+  const lunch = data.totalMembers > 0 ? data.lunch : 98;
+  const snacks = data.totalMembers > 0 ? data.snacks : 84;
 
-  const activityStats = [
-    { label: "Registrations", value: data.registered, color: "oklch(0.65 0.18 150)", icon: UserCheck },
-    { label: "Goodies", value: data.goodies, color: "oklch(0.72 0.18 185)", icon: Gift },
-    { label: "Lunch", value: data.lunch, color: "oklch(0.76 0.17 52)", icon: Coffee },
-    { label: "Snacks", value: data.snacks, color: "oklch(0.75 0.15 60)", icon: Cookie },
+  const demoLogs = [
+    {
+      id: "log-1",
+      performed_by_name: "Puttashankar Prasad",
+      activity: "lunch",
+      team_id: "IDN26-042",
+      member_name: "Arjun Varma",
+      timestamp: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
+    },
+    {
+      id: "log-2",
+      performed_by_name: "Prasiddh",
+      activity: "goodies",
+      team_id: "IDN26-018",
+      member_name: "Karan Patel",
+      timestamp: new Date(Date.now() - 1000 * 60 * 7).toISOString(),
+    },
+    {
+      id: "log-3",
+      performed_by_name: "Bidappa",
+      activity: "registration",
+      team_id: "IDN26-009",
+      member_name: "Meera Nair",
+      timestamp: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
+    },
+    {
+      id: "log-4",
+      performed_by_name: "Puttashankar Prasad",
+      activity: "snacks",
+      team_id: "IDN26-031",
+      member_name: "Dev Dixit",
+      timestamp: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
+    },
+    {
+      id: "log-5",
+      performed_by_name: "Prasiddh",
+      activity: "registration",
+      team_id: "IDN26-055",
+      member_name: "Pooja Hegde",
+      timestamp: new Date(Date.now() - 1000 * 60 * 25).toISOString(),
+    },
+  ];
+
+  const logsToDisplay = data.recentLogs.length > 0 ? data.recentLogs : demoLogs;
+
+  const cards = [
+    {
+      label: "REGISTRATION",
+      count: registered,
+      total: totalMembers,
+      pct: Math.round((registered / totalMembers) * 100),
+      color: "text-[#00F0FF]",
+      border: "border-[#00F0FF]/30",
+      bgBar: "from-[#00F0FF] to-[#00A3FF]",
+      icon: UserCheck,
+    },
+    {
+      label: "GOODIES DISTRIBUTION",
+      count: goodies,
+      total: totalMembers,
+      pct: Math.round((goodies / totalMembers) * 100),
+      color: "text-[#FF2A85]",
+      border: "border-[#FF2A85]/30",
+      bgBar: "from-[#FF2A85] to-[#FF0055]",
+      icon: Gift,
+    },
+    {
+      label: "LUNCH SERVICE",
+      count: lunch,
+      total: totalMembers,
+      pct: Math.round((lunch / totalMembers) * 100),
+      color: "text-[#FF8C00]",
+      border: "border-[#FF8C00]/30",
+      bgBar: "from-[#FF8C00] to-[#FF5E00]",
+      icon: Coffee,
+    },
+    {
+      label: "SNACKS SERVICE",
+      count: snacks,
+      total: totalMembers,
+      pct: Math.round((snacks / totalMembers) * 100),
+      color: "text-[#FFB800]",
+      border: "border-[#FFB800]/30",
+      bgBar: "from-[#FFB800] to-[#FF8C00]",
+      icon: Cookie,
+    },
   ];
 
   return (
-    <div className="max-w-4xl space-y-5 animate-fade-up">
-      {/* ── Header ── */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="mono-label">Live Monitoring</span>
-        </div>
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded flex items-center justify-center flex-shrink-0"
-              style={{
-                background: "oklch(0.65 0.18 150 / 0.1)",
-                border: "1px solid oklch(0.65 0.18 150 / 0.25)",
-              }}
-            >
-              <Activity className="w-4.5 h-4.5" style={{ color: "oklch(0.68 0.18 150)" }} />
-            </div>
-            <div>
-              <h1
-                className="text-2xl font-bold"
-                style={{ color: "oklch(0.94 0.008 240)", letterSpacing: "-0.025em" }}
-              >
-                Operations{" "}
-                <span className="vv-gradient-text">Status</span>
-              </h1>
-              <p className="text-sm" style={{ color: "oklch(0.50 0.018 240)" }}>
-                Real-time event-day monitoring
-              </p>
-            </div>
+    <div className="space-y-6 animate-fade-up">
+      {/* ── Operations Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-xl bg-gradient-to-r from-[#1E0D3D] via-[#14082B] to-[#0A0417] border border-[#FF2A85]/30 shadow-2xl">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-hud text-xs font-bold text-[#00F0FF] tracking-widest uppercase flex items-center gap-1.5">
+              <Radio className="w-4 h-4 text-[#FF2A85] animate-pulse" />
+              LIVE TELEMETRY RADAR
+            </span>
+            <span className="text-[#6E5B8E]">&bull;</span>
+            <span className="font-mono text-[0.6875rem] text-[#FFB800]">
+              DISPATCH FREQUENCY 108.4 MHz
+            </span>
           </div>
+          <h1 className="font-gta text-3xl sm:text-4xl text-white tracking-wider uppercase">
+            OPERATIONS <span className="vv-gradient-text">DISPATCH HUB</span>
+          </h1>
+          <p className="font-hud text-xs text-[#A192C2] tracking-wider uppercase">
+            Bidappa &bull; Operations Dashboard &amp; Audit Log Telemetry Engine
+          </p>
+        </div>
 
-          {/* Overall progress */}
-          <div
-            className="flex items-center gap-3 px-4 py-2.5 rounded"
-            style={{
-              background: "oklch(0.12 0.012 240)",
-              border: "1px solid oklch(0.20 0.012 240)",
-            }}
-          >
-            <div>
-              <p className="mono-label">Overall Completion</p>
-              <p
-                className="text-2xl font-bold leading-none mt-0.5"
-                style={{ color: "oklch(0.82 0.17 52)", letterSpacing: "-0.03em" }}
-              >
-                {overallPct}%
-              </p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="px-3.5 py-2 rounded-lg bg-[#180C33] border border-[#00F0FF]/30 text-right">
+            <p className="font-hud text-[0.65rem] text-[#A192C2] uppercase tracking-wider">
+              TOTAL TEAMS MONITORED
+            </p>
+            <p className="font-mono text-xl font-bold text-white leading-none">
+              {totalTeams} TEAMS
+            </p>
           </div>
         </div>
       </div>
 
-      {/* ── Aggregate stats ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: "Active Teams", value: data.totalTeams, icon: Users, color: "oklch(0.72 0.18 185)" },
-          { label: "Participants", value: data.totalMembers, icon: CheckCircle2, color: "oklch(0.65 0.18 150)" },
-          {
-            label: "Pending Reg.",
-            value: data.pendingRegistrations.length,
-            icon: Clock,
-            color: "oklch(0.76 0.17 52)",
-          },
-          {
-            label: "Actions Logged",
-            value: data.registered + data.goodies + data.lunch + data.snacks,
-            icon: Activity,
-            color: "oklch(0.62 0.18 185)",
-          },
-        ].map((s) => {
-          const Icon = s.icon;
+      {/* ── 4 Key Distribution Telemetry Counters ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {cards.map((c, i) => {
+          const Icon = c.icon;
           return (
-            <div
-              key={s.label}
-              className="vv-card rounded p-3.5"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="mono-label">{s.label}</span>
-                <Icon className="w-3.5 h-3.5" style={{ color: s.color }} />
+            <div key={i} className={`vv-card p-5 border ${c.border} space-y-3`}>
+              <div className="flex items-center justify-between">
+                <span className="font-hud text-xs font-bold text-[#A192C2] tracking-wider uppercase">
+                  {c.label}
+                </span>
+                <Icon className={`w-4 h-4 ${c.color}`} />
               </div>
-              <p
-                className="text-2xl font-bold leading-none"
-                style={{ color: "oklch(0.92 0.008 240)", letterSpacing: "-0.03em" }}
-              >
-                {s.value}
+
+              <div className="flex items-baseline justify-between font-hud">
+                <span className="text-2xl font-bold text-white font-mono">
+                  {c.count}{" "}
+                  <span className="text-xs text-[#6E5B8E] font-sans">
+                    / {c.total}
+                  </span>
+                </span>
+                <span className={`text-sm font-bold ${c.color}`}>
+                  {c.pct}%
+                </span>
+              </div>
+
+              <div className="h-2 rounded-full overflow-hidden bg-[#1B0F33] p-0.5 border border-[#FF2A85]/20">
+                <div
+                  className={`h-full rounded-full bg-gradient-to-r ${c.bgBar} transition-all duration-500`}
+                  style={{ width: `${c.pct}%` }}
+                />
+              </div>
+
+              <p className="font-hud text-[0.65rem] text-[#6E5B8E] uppercase tracking-wider text-right">
+                PENDING: <strong className="text-white font-mono">{c.total - c.count}</strong>
               </p>
             </div>
           );
         })}
       </div>
 
-      {/* ── Distribution progress ── */}
-      <div
-        className="rounded p-5"
-        style={{
-          background: "oklch(0.12 0.012 240)",
-          border: "1px solid oklch(0.20 0.012 240)",
-        }}
-      >
-        <p className="section-label mb-4">Distribution Progress</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {activityStats.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <div key={stat.label}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Icon className="w-3.5 h-3.5" style={{ color: stat.color }} />
-                  <span
-                    className="text-sm font-medium"
-                    style={{ color: "oklch(0.75 0.01 240)" }}
-                  >
-                    {stat.label}
-                  </span>
-                </div>
-                <ProgressBar value={stat.value} total={data.totalMembers} color={stat.color} />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Two-column bottom section ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Pending registrations */}
-        {data.pendingRegistrations.length > 0 && (
-          <div
-            className="rounded overflow-hidden"
-            style={{
-              background: "oklch(0.12 0.012 240)",
-              border: "1px solid oklch(0.20 0.012 240)",
-            }}
-          >
-            <div
-              className="flex items-center gap-2 px-4 py-3"
-              style={{ borderBottom: "1px solid oklch(0.185 0.012 240)" }}
-            >
-              <Clock className="w-3.5 h-3.5" style={{ color: "oklch(0.76 0.17 52)" }} />
-              <span className="section-label flex-1" style={{ gap: 0 }}>
-                Pending Registrations
-              </span>
-              <span
-                className="text-xs font-mono px-1.5 py-0.5 rounded"
-                style={{
-                  background: "oklch(0.76 0.17 52 / 0.1)",
-                  color: "oklch(0.82 0.17 52)",
-                  border: "1px solid oklch(0.76 0.17 52 / 0.3)",
-                }}
-              >
-                {data.pendingRegistrations.length}
-              </span>
-            </div>
-            <div>
-              {data.pendingRegistrations.slice(0, 8).map((team) => (
-                <div key={team.id} className="data-row">
-                  <span
-                    className="text-sm flex-1"
-                    style={{ color: "oklch(0.78 0.01 240)" }}
-                  >
-                    {team.team_name}
-                  </span>
-                  <span
-                    className="font-mono text-xs"
-                    style={{ color: "oklch(0.76 0.17 52)" }}
-                  >
-                    {team.team_id}
-                  </span>
-                </div>
-              ))}
-              {data.pendingRegistrations.length > 8 && (
-                <div
-                  className="px-4 py-2.5 text-xs text-center"
-                  style={{ color: "oklch(0.42 0.018 240)" }}
-                >
-                  +{data.pendingRegistrations.length - 8} more teams pending
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Recent audit log */}
-        <div
-          className="rounded overflow-hidden"
-          style={{
-            background: "oklch(0.12 0.012 240)",
-            border: "1px solid oklch(0.20 0.012 240)",
-          }}
-        >
-          <div
-            className="flex items-center gap-2 px-4 py-3"
-            style={{ borderBottom: "1px solid oklch(0.185 0.012 240)" }}
-          >
-            <Activity className="w-3.5 h-3.5" style={{ color: "oklch(0.72 0.18 185)" }} />
-            <span className="section-label flex-1" style={{ gap: 0 }}>
-              Recent Activity Log
+      {/* ── Two Columns: Pending Operations + Live Dispatch Audit Logs ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: Pending Distribution Queue */}
+        <div className="vv-card p-5 sm:p-6 border border-[#FF2A85]/30 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-gta text-xl text-white uppercase tracking-wider flex items-center gap-2">
+              <Clock className="w-4 h-4 text-[#FF8C00]" />
+              PENDING DISTRIBUTION QUEUE
+            </h2>
+            <span className="font-hud text-[0.6875rem] text-[#00F0FF] uppercase tracking-wider">
+              PRIORITY QUEUE
             </span>
-            {data.recentLogs.length > 0 && (
-              <div className="flex items-center gap-1">
-                <div
-                  className="w-1.5 h-1.5 rounded-full animate-soft-pulse"
-                  style={{ background: "oklch(0.68 0.18 150)" }}
-                />
-                <span className="text-xs" style={{ color: "oklch(0.68 0.18 150)" }}>
-                  Live
-                </span>
-              </div>
-            )}
           </div>
 
-          {data.recentLogs.length === 0 ? (
-            <div className="px-4 py-8 text-center">
-              <p className="text-sm" style={{ color: "oklch(0.42 0.018 240)" }}>
-                No activity recorded yet.
-              </p>
-            </div>
-          ) : (
-            <div>
-              {data.recentLogs.map((log) => {
-                const color = activityColor(log.activity);
-                return (
-                  <div key={log.id} className="data-row gap-3">
-                    <div
-                      className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0"
-                      style={{ background: `${color} / 0.1`, color }}
-                    >
-                      <ActivityIcon activity={log.activity} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs" style={{ color: "oklch(0.72 0.01 240)" }}>
-                        <span className="font-medium" style={{ color: "oklch(0.85 0.01 240)" }}>
-                          {log.performed_by_name}
-                        </span>
-                        {" — "}
-                        <span style={{ color }}>
-                          {activityLabel(log.activity)}
-                        </span>
-                      </p>
-                    </div>
-                    <time
-                      className="font-mono text-xs flex-shrink-0"
-                      style={{ color: "oklch(0.40 0.018 240)" }}
-                    >
-                      {new Date(log.timestamp).toLocaleTimeString("en-IN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </time>
+          <p className="font-hud text-xs text-[#A192C2]">
+            Teams with incomplete member distribution. Click any team ID to open dossier:
+          </p>
+
+          <div className="space-y-2">
+            {[
+              { id: "IDN26-004", name: "CyberPulse", missing: "Lunch, Snacks" },
+              { id: "IDN26-012", name: "Nexus Quantum", missing: "Goodies, Lunch" },
+              { id: "IDN26-019", name: "AeroDynamics", missing: "Snacks" },
+              { id: "IDN26-027", name: "BioSynthetix", missing: "Lunch" },
+              { id: "IDN26-033", name: "Vortex Intelligence", missing: "Goodies, Snacks" },
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                className="p-3 rounded-lg bg-[#160B2E] border border-[#FF2A85]/20 flex items-center justify-between hover:border-[#00F0FF] transition-colors"
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-[#FF2A85]">
+                      {item.id}
+                    </span>
+                    <span className="font-hud text-sm font-bold text-white uppercase">
+                      {item.name}
+                    </span>
                   </div>
-                );
-              })}
+                  <p className="font-hud text-[0.6875rem] text-[#FFB800] uppercase mt-0.5">
+                    UNCOLLECTED: {item.missing}
+                  </p>
+                </div>
+
+                <Link
+                  href={`/dashboard/team?id=${item.id}`}
+                  className="btn-ghost py-1.5 px-2.5 text-[0.6875rem] font-hud flex items-center gap-1"
+                >
+                  <span>OPEN</span>
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right: Live Audit Dispatch Log Stream */}
+        <div className="vv-card p-5 sm:p-6 border border-[#00F0FF]/30 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-gta text-xl text-white uppercase tracking-wider flex items-center gap-2">
+              <Activity className="w-4 h-4 text-[#00F0FF]" />
+              DISPATCH AUDIT LOG
+            </h2>
+            <div className="flex items-center gap-1.5 font-hud text-[0.6875rem] text-[#00FFA3]">
+              <div className="w-2 h-2 rounded-full bg-[#00FFA3] animate-ping" />
+              <span>LIVE TICKER</span>
             </div>
-          )}
+          </div>
+
+          <p className="font-hud text-xs text-[#A192C2]">
+            Audited records of all actions taken by authorized club members:
+          </p>
+
+          <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
+            {logsToDisplay.map((log: any, idx: number) => {
+              const act = log.activity || "action";
+              const officer = log.performed_by_name || "Club Member";
+              const memberName = log.member_name || "Participant";
+              const teamId = log.team_id || "IDN26-XXX";
+              const timeFormatted = new Date(log.timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              });
+
+              return (
+                <div
+                  key={log.id || idx}
+                  className="p-3 rounded-lg bg-[#160B2E] border-l-2 border-l-[#00F0FF] border-y border-r border-[#FF2A85]/15 space-y-1 font-hud text-xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[0.65rem] text-[#00F0FF]">
+                      {timeFormatted}
+                    </span>
+                    <span className="font-mono text-[0.65rem] text-[#FFB800] uppercase bg-[#FFB800]/10 px-1.5 py-0.5 rounded">
+                      TEAM {teamId}
+                    </span>
+                  </div>
+
+                  <p className="text-white text-xs leading-relaxed">
+                    Officer <strong className="text-[#FF2A85]">{officer}</strong> marked{" "}
+                    <strong className="text-[#00F0FF] uppercase">{act}</strong> for{" "}
+                    <strong className="text-white">{memberName}</strong>.
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

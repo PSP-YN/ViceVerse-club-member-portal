@@ -9,7 +9,11 @@ import {
   Loader2,
   CheckCircle2,
   RefreshCw,
-  ChevronRight,
+  Search,
+  Sparkles,
+  Camera,
+  Crosshair,
+  ShieldAlert,
 } from "lucide-react";
 
 type ScanState = "idle" | "scanning" | "success" | "error";
@@ -26,7 +30,6 @@ export default function ScanContent() {
   const [manualId, setManualId] = useState("");
   const [tab, setTab] = useState<Tab>("qr");
   const [lookupLoading, setLookupLoading] = useState(false);
-  const [scannerReady, setScannerReady] = useState(false);
 
   const stopScanner = useCallback(async () => {
     if (html5QrRef.current) {
@@ -53,7 +56,6 @@ export default function ScanContent() {
 
   const startScanner = useCallback(async () => {
     if (!scannerRef.current) return;
-    setScannerReady(false);
     setScanState("idle");
     setErrorMsg("");
 
@@ -65,31 +67,30 @@ export default function ScanContent() {
 
       await scanner.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
+        { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1.0 },
         handleSuccess,
         () => {
-          // Quiet failure during scanning — normal
+          // Normal frame scan
         }
       );
 
       setScanState("scanning");
-      setScannerReady(true);
     } catch (err: unknown) {
       console.error("QR Scanner error:", err);
       const msg = err instanceof Error ? err.message : String(err);
 
       if (msg.toLowerCase().includes("permission") || msg.toLowerCase().includes("denied")) {
         setErrorMsg(
-          "Camera permission denied. Allow camera access in your browser settings."
+          "Camera access denied. Please grant camera permission or use the Manual Entry fallback tab."
         );
       } else if (
         msg.toLowerCase().includes("notfound") ||
         msg.toLowerCase().includes("no camera")
       ) {
-        setErrorMsg("No camera found. Use the Manual Entry tab instead.");
+        setErrorMsg("No active camera found. Use the Manual Entry fallback tab.");
       } else {
         setErrorMsg(
-          "Unable to start camera. Use Manual Entry or check browser permissions."
+          "Camera initialization error. You can use the Manual Entry tab below."
         );
       }
       setScanState("error");
@@ -102,7 +103,9 @@ export default function ScanContent() {
       return;
     }
     startScanner();
-    return () => { stopScanner(); };
+    return () => {
+      stopScanner();
+    };
   }, [tab, startScanner, stopScanner]);
 
   function switchTab(newTab: Tab) {
@@ -121,324 +124,221 @@ export default function ScanContent() {
     router.push(`/dashboard/team?id=${encodeURIComponent(id)}`);
   }
 
-  // suppress unused warning
-  void scannerReady;
+  function handlePresetId(preset: string) {
+    setManualId(preset);
+    setLookupLoading(true);
+    router.push(`/dashboard/team?id=${encodeURIComponent(preset)}`);
+  }
 
   return (
-    <div className="max-w-lg mx-auto space-y-5 animate-fade-up">
-      {/* ── Header ── */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="mono-label">Identification</span>
+    <div className="max-w-xl mx-auto space-y-6 animate-fade-up">
+      {/* ── Page Header ── */}
+      <div className="text-center space-y-1">
+        <div className="flex items-center justify-center gap-2">
+          <span className="font-hud text-xs font-bold text-[#FFB800] tracking-widest uppercase">
+            DIRECTIVE 01 // TEAM IDENTIFICATION
+          </span>
         </div>
-        <h1
-          className="text-2xl font-bold"
-          style={{ color: "oklch(0.94 0.008 240)", letterSpacing: "-0.025em" }}
-        >
-          Team{" "}
-          <span className="vv-gradient-text">Scanner</span>
+        <h1 className="font-gta text-3xl sm:text-4xl text-white tracking-wider uppercase">
+          TARGET <span className="vv-gradient-text">TEAM SCANNER</span>
         </h1>
-        <p className="text-sm mt-0.5" style={{ color: "oklch(0.50 0.018 240)" }}>
-          Scan a QR code or enter the Team ID manually
+        <p className="font-hud text-xs text-[#A192C2] tracking-wider uppercase">
+          Puttashankar Prasad &bull; QR Verification & Entry Fallback Engine
         </p>
       </div>
 
-      {/* ── Tabs ── */}
-      <div
-        className="flex gap-1 p-1 rounded"
-        style={{ background: "oklch(0.12 0.012 240)", border: "1px solid oklch(0.20 0.012 240)" }}
-        role="tablist"
-        aria-label="Identification method"
-      >
-        {(["qr", "manual"] as Tab[]).map((t) => {
-          const isActive = tab === t;
-          const Icon = t === "qr" ? QrCode : Keyboard;
-          const label = t === "qr" ? "QR Scanner" : "Manual Entry";
-          return (
-            <button
-              key={t}
-              id={`tab-${t}-btn`}
-              role="tab"
-              aria-selected={isActive}
-              onClick={() => switchTab(t)}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded text-sm font-medium transition-all"
-              style={{
-                background: isActive ? "oklch(0.155 0.012 240)" : "transparent",
-                color: isActive ? "oklch(0.88 0.01 240)" : "oklch(0.48 0.018 240)",
-                border: isActive ? "1px solid oklch(0.24 0.012 240)" : "1px solid transparent",
-              }}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          );
-        })}
+      {/* ── GTA Mode Toggle Tabs ── */}
+      <div className="grid grid-cols-2 p-1.5 rounded-xl bg-[#130924] border border-[#FF2A85]/30">
+        <button
+          type="button"
+          onClick={() => switchTab("qr")}
+          className={`flex items-center justify-center gap-2 py-3 rounded-lg font-hud text-xs sm:text-sm font-bold tracking-wider uppercase transition-all ${
+            tab === "qr"
+              ? "bg-gradient-to-r from-[#FF2A85] to-[#FF0055] text-white shadow-[0_0_15px_rgba(255,42,133,0.5)] border border-[#FF5E9E]"
+              : "text-[#A192C2] hover:text-white hover:bg-[#1C0E38]"
+          }`}
+        >
+          <Camera className="w-4 h-4" />
+          HUD CAMERA SCAN
+        </button>
+
+        <button
+          type="button"
+          onClick={() => switchTab("manual")}
+          className={`flex items-center justify-center gap-2 py-3 rounded-lg font-hud text-xs sm:text-sm font-bold tracking-wider uppercase transition-all ${
+            tab === "manual"
+              ? "bg-gradient-to-r from-[#00F0FF] to-[#00A3FF] text-[#090514] shadow-[0_0_15px_rgba(0,240,255,0.5)] border border-[#70F7FF]"
+              : "text-[#A192C2] hover:text-white hover:bg-[#1C0E38]"
+          }`}
+        >
+          <Keyboard className="w-4 h-4" />
+          MANUAL ID ENTRY
+        </button>
       </div>
 
-      {/* ── QR SCANNER TAB ── */}
+      {/* ── Tab 1: Camera Scanner ── */}
       {tab === "qr" && (
-        <div
-          className="rounded overflow-hidden"
-          style={{
-            background: "oklch(0.12 0.012 240)",
-            border: "1px solid oklch(0.20 0.012 240)",
-          }}
-        >
-          {/* Header row */}
-          <div
-            className="flex items-center justify-between px-4 py-3"
-            style={{ borderBottom: "1px solid oklch(0.185 0.012 240)" }}
-          >
-            <div className="flex items-center gap-2">
-              <QrCode className="w-3.5 h-3.5" style={{ color: "oklch(0.76 0.17 52)" }} />
-              <span className="text-sm font-medium" style={{ color: "oklch(0.75 0.01 240)" }}>
-                Camera Scanner
-              </span>
-            </div>
-            {(scanState === "scanning" || scanState === "error") && (
-              <button
-                id="restart-scanner-btn"
-                onClick={startScanner}
-                className="flex items-center gap-1.5 text-xs transition-colors"
-                style={{ color: "oklch(0.50 0.018 240)" }}
-                aria-label="Restart scanner"
-              >
-                <RefreshCw className="w-3 h-3" />
-                Restart
-              </button>
-            )}
-          </div>
-
-          {/* Scanner viewport */}
-          <div className="p-4">
-            <div
-              className="relative rounded overflow-hidden bg-black mx-auto"
-              style={{ width: "100%", maxWidth: "300px", aspectRatio: "1 / 1" }}
-            >
-              {/* html5-qrcode mount */}
-              <div id="qr-reader" ref={scannerRef} className="w-full h-full" />
-
-              {/* Corner brackets — engineering style */}
-              {(["tl", "tr", "bl", "br"] as const).map((pos) => (
-                <div
-                  key={pos}
-                  className="absolute pointer-events-none"
-                  style={{
-                    top: pos.startsWith("t") ? "10px" : "auto",
-                    bottom: pos.startsWith("b") ? "10px" : "auto",
-                    left: pos.endsWith("l") ? "10px" : "auto",
-                    right: pos.endsWith("r") ? "10px" : "auto",
-                    width: "20px",
-                    height: "20px",
-                    borderTop: pos.startsWith("t") ? "2px solid oklch(0.76 0.17 52)" : "none",
-                    borderBottom: pos.startsWith("b") ? "2px solid oklch(0.76 0.17 52)" : "none",
-                    borderLeft: pos.endsWith("l") ? "2px solid oklch(0.76 0.17 52)" : "none",
-                    borderRight: pos.endsWith("r") ? "2px solid oklch(0.76 0.17 52)" : "none",
-                  }}
-                />
-              ))}
-
-              {/* Scan line */}
-              {scanState === "scanning" && (
-                <div
-                  className="absolute inset-x-3 h-px pointer-events-none animate-scan"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, transparent, oklch(0.82 0.17 52), transparent)",
-                    boxShadow: "0 0 8px oklch(0.76 0.17 52 / 0.5)",
-                  }}
-                />
-              )}
-
-              {/* Idle overlay */}
-              {scanState === "idle" && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 gap-3 pointer-events-none">
-                  <Loader2 className="w-7 h-7 animate-spin" style={{ color: "oklch(0.76 0.17 52)" }} />
-                  <p className="text-xs" style={{ color: "oklch(0.50 0.018 240)" }}>
-                    Starting camera…
-                  </p>
-                </div>
-              )}
-
-              {/* Success overlay */}
-              {scanState === "success" && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none"
-                  style={{ background: "oklch(0.12 0.012 240 / 0.92)" }}>
-                  <CheckCircle2 className="w-10 h-10" style={{ color: "oklch(0.68 0.18 150)" }} />
-                  <p className="text-sm font-semibold" style={{ color: "oklch(0.72 0.18 150)" }}>
-                    QR Detected
-                  </p>
-                  <p className="text-xs" style={{ color: "oklch(0.52 0.018 240)" }}>
-                    Redirecting…
-                  </p>
-                </div>
-              )}
-
-              {/* Error overlay */}
-              {scanState === "error" && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-5"
-                  style={{ background: "oklch(0.10 0.012 240 / 0.95)" }}>
-                  <AlertTriangle className="w-8 h-8" style={{ color: "oklch(0.68 0.22 22)" }} />
-                  <p className="text-xs text-center leading-relaxed" style={{ color: "oklch(0.62 0.18 22)" }}>
-                    {errorMsg}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Status text */}
-            {scanState === "scanning" && (
-              <p className="text-center text-xs mt-3 flex items-center justify-center gap-2"
-                style={{ color: "oklch(0.50 0.018 240)" }}>
-                <span
-                  className="inline-block w-1.5 h-1.5 rounded-full animate-soft-pulse"
-                  style={{ background: "oklch(0.68 0.18 150)" }}
-                />
-                Point camera at team QR code
-              </p>
-            )}
-
-            {/* Error recovery buttons */}
-            {scanState === "error" && (
-              <div className="mt-3 space-y-2">
-                <button
-                  id="retry-camera-btn"
-                  onClick={startScanner}
-                  className="w-full py-2.5 rounded text-sm font-medium transition-all"
-                  style={{
-                    background: "oklch(0.76 0.17 52 / 0.08)",
-                    border: "1px solid oklch(0.76 0.17 52 / 0.3)",
-                    color: "oklch(0.82 0.17 52)",
-                  }}
-                >
-                  Try Camera Again
-                </button>
-                <button
-                  id="switch-to-manual-btn"
-                  onClick={() => switchTab("manual")}
-                  className="btn-ghost w-full justify-center"
-                >
-                  Use Manual Entry Instead
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── MANUAL ENTRY TAB ── */}
-      {tab === "manual" && (
-        <div
-          className="rounded overflow-hidden"
-          style={{
-            background: "oklch(0.12 0.012 240)",
-            border: "1px solid oklch(0.20 0.012 240)",
-          }}
-        >
-          <div
-            className="flex items-center gap-2 px-4 py-3"
-            style={{ borderBottom: "1px solid oklch(0.185 0.012 240)" }}
-          >
-            <Keyboard className="w-3.5 h-3.5" style={{ color: "oklch(0.76 0.17 52)" }} />
-            <span className="text-sm font-medium" style={{ color: "oklch(0.75 0.01 240)" }}>
-              Manual Team ID
+        <div className="vv-card p-5 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="font-hud text-xs font-bold text-[#00F0FF] uppercase tracking-wider flex items-center gap-1.5">
+              <Crosshair className="w-4 h-4 text-[#FF2A85] animate-spin" />
+              OPTICAL RETICLE ACTIVE
+            </span>
+            <span className="font-mono text-[0.6875rem] text-[#FFB800] bg-[#FFB800]/10 px-2 py-0.5 rounded border border-[#FFB800]/30">
+              {scanState === "scanning" ? "ACQUIRING..." : scanState.toUpperCase()}
             </span>
           </div>
 
-          <div className="p-4 space-y-4">
-            {/* Info note */}
-            <div
-              className="flex items-start gap-2.5 px-3 py-2.5 rounded text-xs"
-              style={{
-                background: "oklch(0.76 0.17 52 / 0.06)",
-                border: "1px solid oklch(0.76 0.17 52 / 0.2)",
-                color: "oklch(0.78 0.17 52)",
-              }}
-            >
-              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-              <div>
-                Use this if QR scanning is unavailable. Format:{" "}
-                <code
-                  className="font-mono px-1 rounded text-xs"
-                  style={{ background: "oklch(0.76 0.17 52 / 0.12)" }}
-                >
-                  IDN26-042
-                </code>
+          {/* Viewfinder Container */}
+          <div className="relative aspect-square max-w-sm mx-auto rounded-xl overflow-hidden bg-[#0A0517] border-2 border-[#FF2A85]/40 shadow-[0_0_25px_rgba(255,42,133,0.2)]">
+            {/* HTML5 QR Camera Container */}
+            <div id="qr-reader" ref={scannerRef} className="w-full h-full object-cover" />
+
+            {/* GTA HUD Overlay Elements */}
+            <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-4">
+              {/* Corner Brackets */}
+              <div className="flex justify-between items-start">
+                <div className="w-8 h-8 border-t-4 border-l-4 border-[#00F0FF] shadow-[0_0_8px_rgba(0,240,255,0.8)]" />
+                <div className="w-8 h-8 border-t-4 border-r-4 border-[#00F0FF] shadow-[0_0_8px_rgba(0,240,255,0.8)]" />
+              </div>
+
+              {/* Center Crosshairs */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-48 h-48 border border-[#00F0FF]/30 rounded-lg flex items-center justify-center relative">
+                  <div className="w-4 h-4 border border-[#FF2A85] rounded-full animate-ping" />
+                  {/* Laser Scanline */}
+                  <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-[#FF2A85] to-transparent shadow-[0_0_12px_#FF2A85] animate-scan" />
+                </div>
+              </div>
+
+              {/* Bottom Corner Brackets */}
+              <div className="flex justify-between items-end">
+                <div className="w-8 h-8 border-b-4 border-l-4 border-[#00F0FF] shadow-[0_0_8px_rgba(0,240,255,0.8)]" />
+                <div className="w-8 h-8 border-b-4 border-r-4 border-[#00F0FF] shadow-[0_0_8px_rgba(0,240,255,0.8)]" />
               </div>
             </div>
 
-            <form onSubmit={handleManualLookup} className="space-y-3" id="manual-lookup-form">
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="team-id-input"
-                  className="block text-xs font-medium"
-                  style={{ color: "oklch(0.60 0.018 240)" }}
-                >
-                  Team ID
-                </label>
+            {/* Error Overlay */}
+            {scanState === "error" && (
+              <div className="absolute inset-0 bg-[#090514]/95 p-6 flex flex-col items-center justify-center text-center space-y-3 z-20">
+                <ShieldAlert className="w-12 h-12 text-[#FF2244]" />
+                <p className="font-hud text-sm font-bold text-white uppercase tracking-wider">
+                  CAMERA SUBSYSTEM OFFLINE
+                </p>
+                <p className="font-hud text-xs text-[#A192C2] max-w-xs">
+                  {errorMsg}
+                </p>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => startScanner()}
+                    className="btn-primary py-2 px-3 text-xs"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 mr-1" /> RETRY CAMERA
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => switchTab("manual")}
+                    className="btn-cyan py-2 px-3 text-xs"
+                  >
+                    ENTER TEAM ID
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <p className="text-center font-hud text-xs text-[#A192C2] uppercase tracking-wider">
+            Point camera directly at the registered Team Leader&apos;s digital QR badge.
+          </p>
+        </div>
+      )}
+
+      {/* ── Tab 2: Manual Entry Fallback ── */}
+      {tab === "manual" && (
+        <div className="vv-card p-5 sm:p-6 space-y-5">
+          <div className="space-y-1">
+            <span className="font-hud text-xs font-bold text-[#00F0FF] uppercase tracking-wider">
+              FALLBACK PROTOCOL // MANUAL REGISTRY
+            </span>
+            <h2 className="font-gta text-2xl text-white uppercase tracking-wider">
+              INPUT REGISTERED TEAM ID
+            </h2>
+            <p className="font-hud text-xs text-[#A192C2]">
+              In accordance with Section 2 of Platform Spec, enter the official Team ID if the camera cannot read the QR token.
+            </p>
+          </div>
+
+          <form onSubmit={handleManualLookup} className="space-y-4">
+            <div className="space-y-1.5">
+              <label
+                htmlFor="manual-team-id"
+                className="block font-hud text-xs font-bold uppercase tracking-wider text-[#00F0FF]"
+              >
+                Team Identifier Code
+              </label>
+              <div className="relative">
                 <input
-                  id="team-id-input"
+                  id="manual-team-id"
                   type="text"
                   value={manualId}
                   onChange={(e) => setManualId(e.target.value.toUpperCase())}
-                  placeholder="IDN26-042"
+                  placeholder="e.g. IDN26-042"
                   required
-                  maxLength={20}
-                  autoComplete="off"
-                  spellCheck={false}
-                  className="vv-input font-mono text-xl tracking-[0.12em] text-center"
+                  className="vv-input font-mono text-lg tracking-widest uppercase pl-4 pr-12"
                 />
-                <p className="text-xs text-center" style={{ color: "oklch(0.42 0.018 240)" }}>
-                  Enter the exact Team ID as shown on registration
-                </p>
+                <Search className="w-5 h-5 text-[#FF2A85] absolute right-3.5 top-1/2 -translate-y-1/2" />
               </div>
-
-              <button
-                id="lookup-team-btn"
-                type="submit"
-                disabled={lookupLoading || !manualId.trim()}
-                className="btn-primary w-full justify-center"
-              >
-                {lookupLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Looking up team…
-                  </>
-                ) : (
-                  <>
-                    Find Team
-                    <ChevronRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </form>
+            </div>
 
             <button
-              onClick={() => switchTab("qr")}
-              className="w-full text-xs transition-colors py-1"
-              style={{ color: "oklch(0.42 0.018 240)" }}
+              type="submit"
+              disabled={lookupLoading || !manualId.trim()}
+              className="btn-cyan w-full py-3 font-hud text-sm font-bold tracking-widest uppercase flex items-center justify-center gap-2"
             >
-              ← Try QR Scanner again
+              {lookupLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  LOCATING TEAM DOSSIER...
+                </>
+              ) : (
+                "LOCATE TEAM & PROCEED TO OPERATIONS →"
+              )}
             </button>
+          </form>
+
+          {/* Quick Demo Test Presets */}
+          <div className="pt-3 border-t border-[#FF2A85]/20 space-y-2">
+            <span className="font-hud text-[0.6875rem] font-bold text-[#FFB800] uppercase tracking-widest">
+              QUICK DEMO TEST PRESETS (CLICK TO TEST IMMEDIATELY):
+            </span>
+            <div className="grid grid-cols-3 gap-2">
+              {["IDN26-001", "IDN26-042", "IDN26-099"].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => handlePresetId(preset)}
+                  className="py-2 px-2 rounded bg-[#1A0E38] border border-[#FF2A85]/30 hover:border-[#00F0FF] text-white font-mono text-xs font-bold transition-all hover:bg-[#FF2A85]/20 hover:scale-[1.02]"
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {/* ── Security note ── */}
-      <div
-        className="flex items-start gap-2.5 px-3 py-3 rounded text-xs"
-        style={{
-          background: "oklch(0.12 0.012 240)",
-          border: "1px solid oklch(0.185 0.012 240)",
-          borderLeft: "2px solid oklch(0.62 0.18 185)",
-        }}
-      >
-        <span style={{ color: "oklch(0.62 0.18 185)" }}>ℹ</span>
-        <span style={{ color: "oklch(0.48 0.018 240)" }}>
-          Each approved team has a unique QR token. Scanning or entering the Team ID only{" "}
-          <strong style={{ color: "oklch(0.65 0.01 240)" }}>identifies</strong> the team —
-          it does not bypass role verification.
-        </span>
+      {/* ── Security Policy Ribbon ── */}
+      <div className="p-4 rounded-xl bg-[#120924] border border-[#00F0FF]/30 flex items-start gap-3">
+        <Sparkles className="w-5 h-5 text-[#00F0FF] flex-shrink-0 mt-0.5" />
+        <div className="space-y-0.5">
+          <p className="font-hud text-xs font-bold text-white uppercase tracking-wider">
+            SECURITY & ROLE GOVERNANCE
+          </p>
+          <p className="font-hud text-xs text-[#A192C2]">
+            Per Section 17, the Team QR or ID only identifies the team. All member activity mutations are verified server-side with duplicate-prevention locks.
+          </p>
+        </div>
       </div>
     </div>
   );
