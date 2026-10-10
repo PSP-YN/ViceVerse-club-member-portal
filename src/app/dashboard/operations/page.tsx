@@ -11,7 +11,7 @@ import { OperationsHeader } from "@/components/operations/operations-header";
 import { PendingOperations } from "@/components/operations/pending-operations";
 import { RecentActivity } from "@/components/operations/recent-activity";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 10;
 
 export const metadata = {
   title: "Event Operations | ViceVerse Club Member Portal",

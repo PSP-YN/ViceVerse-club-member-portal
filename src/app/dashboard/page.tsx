@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 30;
 
 export const metadata = {
   title: "Dashboard | ViceVerse Club Member Portal",
