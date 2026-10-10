@@ -90,6 +90,9 @@ CREATE TABLE IF NOT EXISTS public.announcements (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Ensure the is_active column exists if the table was created previously
+ALTER TABLE public.announcements ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+
 -- ============================================================
 -- AUDIT LOGS TABLE
 -- ============================================================
