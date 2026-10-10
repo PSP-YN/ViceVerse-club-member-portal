@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { getApprovedTeams } from "@/lib/operations/data";
+import { buildSummary } from "@/lib/operations/summary";
 import {
   QrCode,
   Users,
@@ -9,105 +11,47 @@ import {
   Megaphone,
   ArrowRight,
   Activity,
-  Zap,
-  Target,
-  Clock,
-  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 
-export const revalidate = 30;
+export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: "Mission Hub | ViceVerse Club Member Portal",
+  title: "Dashboard | ViceVerse Club Member Portal",
 };
 
 async function getStats() {
   const supabase = await createClient();
 
-  const [membersRes, teamsRes, announcementsRes] = await Promise.all([
-    supabase
-      .from("members")
-      .select("registration_status, goodies_status, lunch_status, snacks_status, team_id"),
-    supabase
-      .from("teams")
-      .select("id")
-      .eq("payment_status", "approved"),
-    supabase
-      .from("announcements")
-      .select("id, title, message, created_at")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .limit(3),
-  ]);
+  // Member figures come from approved teams only (same helper as the
+  // Operations page), so members of unapproved teams can't inflate totals.
+  const teams = await getApprovedTeams(supabase);
+  const summary = buildSummary(teams, [], new Date());
 
-  const members = (membersRes.data ?? []) as Array<{
-    registration_status: boolean;
-    goodies_status: boolean;
-    lunch_status: boolean;
-    snacks_status: boolean;
-    team_id?: string;
-  }>;
-  const teams = (teamsRes.data ?? []) as Array<{ id: string }>;
-  const announcements = (announcementsRes.data ?? []) as Array<{
-    id: string;
-    title: string;
-    message: string;
-    created_at: string;
-  }>;
+  const { data: announcements } = await supabase
+    .from("announcements")
+    .select("id, title, message, created_at")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(3);
 
-  const totalMembers = members?.length ?? 0;
-  const totalTeams = teams?.length ?? 0;
+  const totalMembers = summary.totalMembers;
+  const totalTeams = teams.length;
 
-  const registered = members?.filter((m) => m.registration_status).length ?? 0;
-  const goodies = members?.filter((m) => m.goodies_status).length ?? 0;
-  const lunch = members?.filter((m) => m.lunch_status).length ?? 0;
-  const snacks = members?.filter((m) => m.snacks_status).length ?? 0;
+  const registered = summary.activities.registration.completed;
+  const goodies = summary.activities.goodies.completed;
+  const lunch = summary.activities.lunch.completed;
+  const snacks = summary.activities.snacks.completed;
 
-  return { 
-    totalTeams, 
-    totalMembers, 
-    registered, 
-    goodies, 
-    lunch, 
-    snacks, 
-    announcements: announcements ?? [] 
+  return {
+    totalTeams,
+    totalMembers,
+    registered,
+    goodies,
+    lunch,
+    snacks,
+    announcements: announcements ?? [],
   };
-}
-
-function ProgressGlowBar({ 
-  value, 
-  total, 
-  gradient, 
-  textColor 
-}: { 
-  value: number; 
-  total: number; 
-  gradient: string; 
-  textColor: string; 
-}) {
-  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
-  return (
-    <div className="mt-3 space-y-1.5">
-      <div className="flex justify-between items-baseline font-hud">
-        <span className="text-xl font-bold tracking-tight text-white">
-          {value}{" "}
-          <span className="text-xs font-normal text-[#A192C2]">
-            / {total}
-          </span>
-        </span>
-        <span className={`text-sm font-bold tracking-wider ${textColor}`}>
-          {pct}%
-        </span>
-      </div>
-      <div className="h-2 rounded-full overflow-hidden bg-[#1B0F33] p-0.5 border border-[#FF2A85]/20">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ${gradient}`}
-          style={{ width: `${Math.max(pct, 4)}%` }}
-        />
-      </div>
-    </div>
-  );
 }
 
 export default async function DashboardPage() {
@@ -124,283 +68,183 @@ export default async function DashboardPage() {
   try {
     stats = await getStats();
   } catch {
-    // Database might be uninitialized in fresh demo environment
+    // Stats will be empty if database isn't connected
   }
 
-  // Realistic fallback demo telemetry if zero teams exist in DB
-  const displayTotalTeams = stats.totalTeams > 0 ? stats.totalTeams : 48;
-  const displayTotalMembers = stats.totalMembers > 0 ? stats.totalMembers : 144;
-  const displayRegistered = stats.totalMembers > 0 ? stats.registered : 118;
-  const displayGoodies = stats.totalMembers > 0 ? stats.goodies : 112;
-  const displayLunch = stats.totalMembers > 0 ? stats.lunch : 98;
-  const displaySnacks = stats.totalMembers > 0 ? stats.snacks : 84;
-
-  const operationStats = [
+  const statCards = [
     {
-      label: "MEMBER REGISTRATIONS",
-      sublabel: "Turnstile Verification",
-      value: displayRegistered,
-      total: displayTotalMembers,
+      label: "Teams Registered",
+      value: stats.totalTeams,
+      icon: Users,
+      color: "text-blue-400",
+      bg: "bg-blue-950/40",
+      border: "border-blue-800/40",
+    },
+    {
+      label: "Registrations",
+      value: `${stats.registered}/${stats.totalMembers}`,
       icon: CheckCircle2,
-      gradient: "bg-gradient-to-r from-[#00F0FF] to-[#00FFA3]",
-      border: "border-[#00F0FF]/30",
-      textColor: "text-[#00F0FF]",
-      iconBg: "bg-[#00F0FF]/10 text-[#00F0FF]",
+      color: "text-green-400",
+      bg: "bg-green-950/40",
+      border: "border-green-800/40",
     },
     {
-      label: "GOODIES DISTRIBUTION",
-      sublabel: "Kits & Badges Issued",
-      value: displayGoodies,
-      total: displayTotalMembers,
+      label: "Goodies Distributed",
+      value: `${stats.goodies}/${stats.totalMembers}`,
       icon: Gift,
-      gradient: "bg-gradient-to-r from-[#FF2A85] to-[#FF00AA]",
-      border: "border-[#FF2A85]/30",
-      textColor: "text-[#FF2A85]",
-      iconBg: "bg-[#FF2A85]/10 text-[#FF2A85]",
+      color: "text-purple-400",
+      bg: "bg-purple-950/40",
+      border: "border-purple-800/40",
     },
     {
-      label: "LUNCH DISPENSED",
-      sublabel: "Meal Pass Verified",
-      value: displayLunch,
-      total: displayTotalMembers,
+      label: "Lunch Distributed",
+      value: `${stats.lunch}/${stats.totalMembers}`,
       icon: Coffee,
-      gradient: "bg-gradient-to-r from-[#FF8C00] to-[#FFB800]",
-      border: "border-[#FF8C00]/30",
-      textColor: "text-[#FF8C00]",
-      iconBg: "bg-[#FF8C00]/10 text-[#FF8C00]",
+      color: "text-orange-400",
+      bg: "bg-orange-950/40",
+      border: "border-orange-800/40",
     },
     {
-      label: "SNACKS DISPENSED",
-      sublabel: "Evening Refreshment",
-      value: displaySnacks,
-      total: displayTotalMembers,
+      label: "Snacks Distributed",
+      value: `${stats.snacks}/${stats.totalMembers}`,
       icon: Cookie,
-      gradient: "bg-gradient-to-r from-[#FFB800] to-[#00F0FF]",
-      border: "border-[#FFB800]/30",
-      textColor: "text-[#FFB800]",
-      iconBg: "bg-[#FFB800]/10 text-[#FFB800]",
+      color: "text-yellow-400",
+      bg: "bg-yellow-950/40",
+      border: "border-yellow-800/40",
     },
   ];
 
   const quickActions = [
     {
       href: "/dashboard/scan",
-      title: "SCAN TEAM QR",
-      description: "Activate camera HUD to identify teams instantly by secure token",
+      label: "Scan Team QR",
+      description: "Scan a team's QR code to start operations",
       icon: QrCode,
-      tag: "PRIMARY DIRECTIVE",
-      tagColor: "bg-[#FF2A85]/20 text-[#FF2A85] border-[#FF2A85]/40",
-      borderHover: "hover:border-[#FF2A85]",
+      color: "from-blue-600 to-violet-600",
     },
     {
       href: "/dashboard/team",
-      title: "MANUAL TEAM LOOKUP",
-      description: "Search by Team ID (e.g. IDN26-042) to inspect all 3 members and mark items",
+      label: "Enter Team ID",
+      description: "Manually look up a team by their Team ID",
       icon: Users,
-      tag: "DIRECTIVE 02",
-      tagColor: "bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/40",
-      borderHover: "hover:border-[#00F0FF]",
-    },
-    {
-      href: "/dashboard/operations",
-      title: "OPERATIONS TELEMETRY",
-      description: "Monitor real-time event stats, pending members, and live audit dispatch logs",
-      icon: Activity,
-      tag: "LIVE RADAR",
-      tagColor: "bg-[#FFB800]/20 text-[#FFB800] border-[#FFB800]/40",
-      borderHover: "hover:border-[#FFB800]",
+      color: "from-violet-600 to-pink-600",
     },
     {
       href: "/dashboard/announcements",
-      title: "ORGANIZER RADIO",
-      description: "Read critical event alerts, schedule updates, and organizers broadcasts",
+      label: "View Announcements",
+      description: "Read organizer announcements and alerts",
       icon: Megaphone,
-      tag: "RECEIVER ONLY",
-      tagColor: "bg-purple-500/20 text-purple-300 border-purple-500/40",
-      borderHover: "hover:border-purple-400",
+      color: "from-pink-600 to-orange-600",
+    },
+    {
+      href: "/dashboard/operations",
+      label: "Operations Status",
+      description: "Monitor event-day activity and progress",
+      icon: Activity,
+      color: "from-green-600 to-teal-600",
     },
   ];
 
-  const overallPct = Math.round(
-    ((displayRegistered + displayGoodies + displayLunch + displaySnacks) /
-      (displayTotalMembers * 4)) *
-      100
-  );
-
   return (
-    <div className="space-y-6 animate-fade-up">
-      {/* ── Top Header & Mission Objective Ribbon ── */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#170B2F] via-[#120826] to-[#0A0517] border border-[#FF2A85]/30 p-5 sm:p-6 shadow-2xl">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-[#FF2A85]/15 blur-3xl rounded-full pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 -mb-16 w-64 h-64 bg-[#00F0FF]/15 blur-3xl rounded-full pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="font-hud text-xs font-bold text-[#FFB800] tracking-widest uppercase flex items-center gap-1.5">
-                <Target className="w-3.5 h-3.5 text-[#FF2A85]" />
-                CURRENT OBJECTIVE // SECTOR 04
-              </span>
-              <span className="text-[#6E5B8E]">·</span>
-              <span className="font-mono text-[0.6875rem] text-[#00F0FF]">
-                VICE CITY CONVENTION ARENA
-              </span>
-            </div>
-            <h1 className="font-gta text-3xl sm:text-4xl text-white tracking-wider uppercase leading-none">
-              EVENT OPERATIONS <span className="vv-gradient-text">COMMAND</span>
-            </h1>
-            <p className="font-hud text-xs sm:text-sm text-[#A192C2] tracking-wide uppercase mt-1">
-              Identify teams, inspect all 3 members individually, and prevent duplicate distributions.
-            </p>
-          </div>
-
-          {/* Overall Mission Progress Badge */}
-          <div className="flex-shrink-0 flex items-center gap-4 bg-[#1C0F38] border border-[#FF2A85]/40 rounded-lg p-3 sm:px-5">
-            <div className="text-right">
-              <p className="font-hud text-[0.6875rem] font-bold text-[#A192C2] uppercase tracking-wider">
-                TOTAL COMPLETION
-              </p>
-              <p className="font-gta text-3xl text-white leading-none tracking-wide">
-                {overallPct}%
-              </p>
-            </div>
-            <div className="w-12 h-12 rounded-full border-2 border-[#00F0FF] p-1 flex items-center justify-center bg-[#120924] shadow-[0_0_12px_rgba(0,240,255,0.4)]">
-              <Zap className="w-6 h-6 text-[#FF2A85] fill-[#FF2A85]" />
-            </div>
-          </div>
-        </div>
-
-        {/* Global Progress Line */}
-        <div className="mt-5 pt-4 border-t border-[#FF2A85]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-hud text-xs uppercase tracking-wider">
-          <div className="flex items-center gap-4 text-[#A192C2]">
-            <span>
-              APPROVED TEAMS: <strong className="text-white font-mono">{displayTotalTeams}</strong>
-            </span>
-            <span>·</span>
-            <span>
-              TOTAL PARTICIPANTS: <strong className="text-white font-mono">{displayTotalMembers}</strong>
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[#00F0FF]">
-            <Clock className="w-3.5 h-3.5" />
-            <span>EVENT STATUS: ACTIVE & SYNCHRONIZED</span>
-          </div>
-        </div>
+    <div className="space-y-8 max-w-6xl">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
+          Club Member{" "}
+          <span className="vv-gradient-text">Dashboard</span>
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Manage event-day operations for ViceVerse Ideathon
+        </p>
       </div>
 
-      {/* ── 4 Telemetry Stats Cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {operationStats.map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <div
-              key={i}
-              className={`vv-card p-5 border ${stat.border} relative overflow-hidden group hover:scale-[1.01] transition-transform`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-hud text-xs font-bold text-[#A192C2] tracking-wider uppercase">
-                  {stat.label}
-                </span>
-                <div className={`p-2 rounded-lg ${stat.iconBg}`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-              </div>
-              <p className="text-[0.6875rem] text-[#6E5B8E] font-hud tracking-wide uppercase">
-                {stat.sublabel}
+      {/* Announcements Banner */}
+      {stats.announcements.length > 0 && (
+        <div className="rounded-2xl border border-yellow-800/40 bg-yellow-950/20 p-4 space-y-2">
+          <div className="flex items-center gap-2 text-yellow-400 font-semibold text-sm">
+            <Megaphone className="w-4 h-4" />
+            Latest Announcements
+          </div>
+          {stats.announcements.map((ann) => (
+            <div key={ann.id} className="pl-6">
+              <p className="text-sm font-medium text-foreground">{ann.title}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {ann.message}
               </p>
-              <ProgressGlowBar
-                value={stat.value}
-                total={stat.total}
-                gradient={stat.gradient}
-                textColor={stat.textColor}
-              />
             </div>
-          );
-        })}
-      </div>
-
-      {/* ── Directives / Quick Action Grid ── */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-gta text-xl text-white tracking-wider uppercase flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[#FF2A85]" />
-            QUICK DIRECTIVES // DISPATCH ACTIONS
-          </h2>
-          <span className="font-hud text-xs text-[#00F0FF] uppercase tracking-widest font-bold">
-            SECTOR STAFF TOOLS
-          </span>
+          ))}
+          <Link
+            href="/dashboard/announcements"
+            className="flex items-center gap-1 text-xs text-yellow-400 hover:text-yellow-300 pl-6 pt-1"
+          >
+            View all <ArrowRight className="w-3 h-3" />
+          </Link>
         </div>
+      )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickActions.map((action, i) => {
-            const Icon = action.icon;
+      {/* Stats Grid */}
+      <div>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+          Event Operations Overview
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          {statCards.map((stat) => {
+            const Icon = stat.icon;
             return (
-              <Link
-                key={i}
-                href={action.href}
-                className={`vv-card p-5 flex flex-col justify-between group transition-all ${action.borderHover}`}
+              <div
+                key={stat.label}
+                className={`glass-card rounded-2xl p-4 border ${stat.border} ${stat.bg} transition-all hover:scale-[1.02]`}
               >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#1D0E3B] border border-[#FF2A85]/30 flex items-center justify-center text-[#00F0FF] group-hover:text-white group-hover:bg-[#FF2A85] transition-colors shadow-[0_0_12px_rgba(255,42,133,0.2)]">
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <span className={`font-hud text-[0.625rem] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${action.tagColor}`}>
-                      {action.tag}
-                    </span>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className={`p-1.5 rounded-lg bg-black/20`}>
+                    <Icon className={`w-4 h-4 ${stat.color}`} />
                   </div>
-
-                  <h3 className="font-gta text-lg text-white tracking-wide uppercase group-hover:text-[#00F0FF] transition-colors">
-                    {action.title}
-                  </h3>
-                  <p className="font-hud text-xs text-[#A192C2] tracking-wide mt-1 leading-relaxed">
-                    {action.description}
-                  </p>
                 </div>
-
-                <div className="mt-4 pt-3 border-t border-[#FF2A85]/15 flex items-center justify-between text-xs font-hud font-bold text-[#FF2A85] group-hover:text-[#00F0FF] transition-colors uppercase tracking-wider">
-                  <span>EXECUTE DIRECTIVE</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
+                <p className={`text-xl font-bold ${stat.color}`}>
+                  {stat.value}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stat.label}
+                </p>
+              </div>
             );
           })}
         </div>
       </div>
 
-      {/* ── Latest Announcements Preview ── */}
-      {stats.announcements.length > 0 && (
-        <div className="vv-card p-5 border border-[#FF8C00]/30 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Megaphone className="w-4 h-4 text-[#FF8C00]" />
-              <h3 className="font-gta text-lg text-white uppercase tracking-wider">
-                RADIO BROADCAST // URGENT ORGANIZER ALERT
-              </h3>
-            </div>
-            <Link
-              href="/dashboard/announcements"
-              className="font-hud text-xs font-bold text-[#00F0FF] hover:underline uppercase tracking-wider"
-            >
-              VIEW ALL ALERTS →
-            </Link>
-          </div>
-
-          <div className="p-4 rounded-lg bg-[#1A0E38] border border-[#FF8C00]/20 space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-[#FF8C00] font-bold">
-                {stats.announcements[0].title}
-              </span>
-              <span className="font-mono text-[0.65rem] text-[#6E5B8E]">
-                {new Date(stats.announcements[0].created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            </div>
-            <p className="font-hud text-xs text-[#A192C2]">
-              {stats.announcements[0].message}
-            </p>
-          </div>
+      {/* Quick Actions */}
+      <div>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+          Quick Actions
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Link
+                key={action.href}
+                href={action.href}
+                className="glass-card rounded-2xl p-5 border border-border hover:border-primary/30 hover:glow-border transition-all group flex items-start gap-4"
+              >
+                <div
+                  className={`p-3 rounded-xl bg-gradient-to-br ${action.color} shadow-lg group-hover:scale-110 transition-transform`}
+                >
+                  <Icon className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                    {action.label}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                    {action.description}
+                  </p>
+                </div>
+                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0 mt-0.5" />
+              </Link>
+            );
+          })}
         </div>
-      )}
+      </div>
     </div>
   );
 }
