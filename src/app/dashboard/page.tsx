@@ -41,9 +41,20 @@ async function getStats() {
       .limit(3),
   ]);
 
-  const members = membersRes.data;
-  const teams = teamsRes.data;
-  const announcements = announcementsRes.data;
+  const members = (membersRes.data ?? []) as Array<{
+    registration_status: boolean;
+    goodies_status: boolean;
+    lunch_status: boolean;
+    snacks_status: boolean;
+    team_id?: string;
+  }>;
+  const teams = (teamsRes.data ?? []) as Array<{ id: string }>;
+  const announcements = (announcementsRes.data ?? []) as Array<{
+    id: string;
+    title: string;
+    message: string;
+    created_at: string;
+  }>;
 
   const totalMembers = members?.length ?? 0;
   const totalTeams = teams?.length ?? 0;

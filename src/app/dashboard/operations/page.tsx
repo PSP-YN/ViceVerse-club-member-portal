@@ -41,9 +41,27 @@ async function getOperationsData() {
       .limit(15),
   ]);
 
-  const members = membersRes.data;
-  const teams = teamsRes.data;
-  const recentLogs = logsRes.data;
+  const members = (membersRes.data ?? []) as Array<{
+    id: string;
+    name: string;
+    team_id: string;
+    registration_status: boolean;
+    goodies_status: boolean;
+    lunch_status: boolean;
+    snacks_status: boolean;
+  }>;
+  const teams = (teamsRes.data ?? []) as Array<{
+    id: string;
+    team_id: string;
+    team_name: string;
+  }>;
+  const recentLogs = (logsRes.data ?? []) as Array<{
+    id: string;
+    performed_by_name: string;
+    activity: string;
+    timestamp: string;
+    member_id?: string;
+  }>;
 
   const totalMembers = members?.length ?? 0;
   const totalTeams = teams?.length ?? 0;
