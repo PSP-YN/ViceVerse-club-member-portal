@@ -137,7 +137,7 @@ export default function ScanContent() {
           TARGET <span className="vv-gradient-text">TEAM SCANNER</span>
         </h1>
         <p className="font-hud text-xs text-[#A192C2] tracking-wider uppercase">
-          Puttashankar Prasad &bull; QR Verification & Entry Fallback Engine
+          QR Verification & Entry Fallback Engine
         </p>
       </div>
 

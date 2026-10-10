@@ -201,10 +201,7 @@ export default function LoginPage() {
         {/* Footer info */}
         <div className="text-center space-y-1">
           <p className="font-hud text-xs text-[#A192C2] tracking-wider uppercase">
-            VICEVERSE IDEATHON 2026 // CLUB MEMBER PORTAL TEAM
-          </p>
-          <p className="font-mono text-[0.65rem] text-[#6E5B8E]">
-            PUTTASHANKAR PRASAD · PRASIDDH · BIDAPPA
+            VICEVERSE IDEATHON 2026 // CLUB MEMBER PORTAL
           </p>
         </div>
       </div>

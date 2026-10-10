@@ -181,7 +181,7 @@ export default function TeamPageContent() {
                   ...m,
                   [field]: true,
                   [`${activity}_at`]: now,
-                  [`${activity}_by`]: "Puttashankar Prasad",
+                  [`${activity}_by`]: "Event Officer",
                 }
               : m
           ),
@@ -233,7 +233,7 @@ export default function TeamPageContent() {
         </Link>
 
         <span className="font-hud text-xs font-bold text-[#00F0FF] tracking-widest uppercase">
-          DIRECTIVE 02 &bull; PRASIDDH MEMBER TRACKING ENGINE
+          DIRECTIVE 02 &bull; MEMBER TRACKING ENGINE
         </span>
       </div>
 

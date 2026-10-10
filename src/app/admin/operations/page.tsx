@@ -5,8 +5,7 @@ export const metadata = {
 };
 
 export default function AdminOperationsPage() {
-  // Reuse the excellent operations dashboard built by Bidappa,
-  // wrapped in the admin layout context.
+  // Reuse the operations dashboard wrapped in the admin layout context.
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="bg-[#120924] border border-[#00F0FF]/30 p-4 rounded-xl text-[#00F0FF] font-hud text-xs tracking-wider uppercase mb-8">

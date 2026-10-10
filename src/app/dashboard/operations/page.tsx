@@ -156,7 +156,7 @@ export default async function OperationsPage() {
             OPERATIONS <span className="vv-gradient-text">DISPATCH HUB</span>
           </h1>
           <p className="font-hud text-xs text-[#A192C2] tracking-wider uppercase">
-            Bidappa &bull; Operations Dashboard &amp; Audit Log Telemetry Engine
+            Operations Dashboard &amp; Audit Log Telemetry Engine
           </p>
         </div>
 
