@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 30;
 
 export const metadata = {
   title: "Dashboard | ViceVerse Club Member Portal",
@@ -28,14 +28,12 @@ async function getStats() {
   const teams = await getApprovedTeams(supabase);
   const summary = buildSummary(teams, [], new Date());
 
-
   const { data: announcements } = await supabase
     .from("announcements")
     .select("id, title, message, created_at")
     .eq("is_active", true)
     .order("created_at", { ascending: false })
     .limit(3);
-
 
   const totalMembers = summary.totalMembers;
   const totalTeams = teams.length;
