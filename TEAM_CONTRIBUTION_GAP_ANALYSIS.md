@@ -6,7 +6,7 @@ Based on the current state of the **ViceVerse Club Member Portal** repository, t
 
 The **Club Member Portal** is fully operational and styled with the requested "GTA Vice City" synthwave aesthetic. 
 The following features are implemented:
-*   **Authentication & Demo Mode:** Complete Supabase authentication with a `vv_demo_auth` bypass for testing.
+*   **Authentication:** Complete Supabase authentication in production mode (demo modes and testing bypasses removed).
 *   **Theming & UI Engine:** Custom CSS token system, responsive HUD, neon accents, and custom typography (Bebas Neue, Rajdhani).
 *   **Mission Hub (Dashboard):** High-level overview of member statistics and status.
 *   **Scan Interface:** Tactical camera HUD (UI level) ready for real device camera integration.
