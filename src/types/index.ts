@@ -1,6 +1,5 @@
 // Types for ViceVerse Club Member Portal
 // Team 4 – Club Member Portal
-// Team Lead: Puttashankar Prasad
 
 export interface Team {
   id: string;

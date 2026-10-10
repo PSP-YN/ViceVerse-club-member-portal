@@ -66,62 +66,6 @@ interface ActionState {
   error: string | null;
 }
 
-const mockDemoTeam: Team = {
-  id: "d9e8f7a6-b5c4-4321-9876-112233445566",
-  team_id: "IDN26-042",
-  team_name: "SYNAPSE OVERLOAD",
-  domain: "Artificial Intelligence & Edge Compute",
-  qr_token: "vv_demo_token_idn26_042",
-  payment_status: "approved",
-  created_at: new Date().toISOString(),
-  members: [
-    {
-      id: "mem-01",
-      team_id: "d9e8f7a6-b5c4-4321-9876-112233445566",
-      name: "Arjun Varma",
-      email: "arjun.varma@viceverse.edu",
-      phone: "+91 98765 43210",
-      role: "leader",
-      registration_status: true,
-      registration_by: "Puttashankar Prasad",
-      registration_at: "2026-10-09T09:15:00Z",
-      goodies_status: true,
-      goodies_by: "Prasiddh",
-      goodies_at: "2026-10-09T09:45:00Z",
-      lunch_status: false,
-      snacks_status: false,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "mem-02",
-      team_id: "d9e8f7a6-b5c4-4321-9876-112233445566",
-      name: "Rohit Sharma",
-      email: "rohit.sharma@viceverse.edu",
-      phone: "+91 98765 43211",
-      role: "member",
-      registration_status: true,
-      registration_by: "Puttashankar Prasad",
-      registration_at: "2026-10-09T09:16:00Z",
-      goodies_status: false,
-      lunch_status: false,
-      snacks_status: false,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "mem-03",
-      team_id: "d9e8f7a6-b5c4-4321-9876-112233445566",
-      name: "Sneha Rao",
-      email: "sneha.rao@viceverse.edu",
-      phone: "+91 98765 43212",
-      role: "member",
-      registration_status: false,
-      goodies_status: false,
-      lunch_status: false,
-      snacks_status: false,
-      created_at: new Date().toISOString(),
-    },
-  ],
-};
 
 export default function TeamPageContent() {
   const router = useRouter();
@@ -145,19 +89,6 @@ export default function TeamPageContent() {
     setError(null);
     setTeam(null);
 
-    // If param is a demo ID or contains demo, load mock immediately
-    if (
-      teamIdParam?.startsWith("IDN26-") ||
-      qrToken?.includes("demo") ||
-      teamIdParam === "DEMO"
-    ) {
-      const demoData = { ...mockDemoTeam };
-      if (teamIdParam) demoData.team_id = teamIdParam;
-      setTeam(demoData);
-      setLoading(false);
-      return;
-    }
-
     try {
       const supabase = createClient();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -180,11 +111,7 @@ export default function TeamPageContent() {
       const { data, error: dbError } = await query.single();
 
       if (dbError || !data) {
-        // Fallback for evaluator review if team not found in DB
-        const fallback = { ...mockDemoTeam };
-        if (teamIdParam) fallback.team_id = teamIdParam;
-        setTeam(fallback);
-        showToast(`Loaded team dossier for ${teamIdParam || "scanned QR"} (Evaluator Mode)`, "success");
+        setError(`No active dossier found for ${teamIdParam || "scanned QR"}.`);
         setLoading(false);
         return;
       }
@@ -197,11 +124,8 @@ export default function TeamPageContent() {
 
       setTeam(data as unknown as Team);
     } catch {
-      // Fallback
-      setTeam(mockDemoTeam);
-      showToast("Operating in offline evaluator mode.", "success");
+      setError("Connection to database failed. Please check network connection.");
     }
-
     setLoading(false);
   }, [qrToken, teamIdParam]);
 
@@ -257,7 +181,7 @@ export default function TeamPageContent() {
                   ...m,
                   [field]: true,
                   [`${activity}_at`]: now,
-                  [`${activity}_by`]: "Puttashankar Prasad",
+                  [`${activity}_by`]: "Event Officer",
                 }
               : m
           ),
@@ -270,29 +194,10 @@ export default function TeamPageContent() {
         [key]: { memberId: member.id, activity, loading: false, done: true, error: null },
       }));
     } catch {
-      // Offline fallback state update
-      const now = new Date().toISOString();
-      setTeam((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          members: prev.members.map((m) =>
-            m.id === member.id
-              ? {
-                  ...m,
-                  [field]: true,
-                  [`${activity}_at`]: now,
-                  [`${activity}_by`]: "Puttashankar Prasad",
-                }
-              : m
-          ),
-        };
-      });
-
-      showToast(`[OFFLINE] RECORDED ${activityConfig[activity].label} FOR ${member.name}`, "success");
+      showToast(`FAILED TO RECORD ${activityConfig[activity].label} FOR ${member.name}. Check connection.`, "error");
       setActionStates((prev) => ({
         ...prev,
-        [key]: { memberId: member.id, activity, loading: false, done: true, error: null },
+        [key]: { memberId: member.id, activity, loading: false, done: false, error: "Connection error" },
       }));
     }
   }
@@ -328,7 +233,7 @@ export default function TeamPageContent() {
         </Link>
 
         <span className="font-hud text-xs font-bold text-[#00F0FF] tracking-widest uppercase">
-          DIRECTIVE 02 &bull; PRASIDDH MEMBER TRACKING ENGINE
+          DIRECTIVE 02 &bull; MEMBER TRACKING ENGINE
         </span>
       </div>
 
@@ -358,15 +263,6 @@ export default function TeamPageContent() {
             {error}
           </p>
           <div className="flex justify-center gap-3 pt-2">
-            <button
-              onClick={() => {
-                setTeam(mockDemoTeam);
-                setError(null);
-              }}
-              className="btn-cyan py-2.5 px-4 text-xs font-hud"
-            >
-              LOAD DEMO TEAM (IDN26-042)
-            </button>
             <Link href="/dashboard/scan" className="btn-primary py-2.5 px-4 text-xs font-hud">
               SCAN ANOTHER CODE
             </Link>

@@ -124,12 +124,6 @@ export default function ScanContent() {
     router.push(`/dashboard/team?id=${encodeURIComponent(id)}`);
   }
 
-  function handlePresetId(preset: string) {
-    setManualId(preset);
-    setLookupLoading(true);
-    router.push(`/dashboard/team?id=${encodeURIComponent(preset)}`);
-  }
-
   return (
     <div className="max-w-xl mx-auto space-y-6 animate-fade-up">
       {/* ── Page Header ── */}
@@ -143,7 +137,7 @@ export default function ScanContent() {
           TARGET <span className="vv-gradient-text">TEAM SCANNER</span>
         </h1>
         <p className="font-hud text-xs text-[#A192C2] tracking-wider uppercase">
-          Puttashankar Prasad &bull; QR Verification & Entry Fallback Engine
+          QR Verification & Entry Fallback Engine
         </p>
       </div>
 
@@ -306,25 +300,6 @@ export default function ScanContent() {
               )}
             </button>
           </form>
-
-          {/* Quick Demo Test Presets */}
-          <div className="pt-3 border-t border-[#FF2A85]/20 space-y-2">
-            <span className="font-hud text-[0.6875rem] font-bold text-[#FFB800] uppercase tracking-widest">
-              QUICK DEMO TEST PRESETS (CLICK TO TEST IMMEDIATELY):
-            </span>
-            <div className="grid grid-cols-3 gap-2">
-              {["IDN26-001", "IDN26-042", "IDN26-099"].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => handlePresetId(preset)}
-                  className="py-2 px-2 rounded bg-[#1A0E38] border border-[#FF2A85]/30 hover:border-[#00F0FF] text-white font-mono text-xs font-bold transition-all hover:bg-[#FF2A85]/20 hover:scale-[1.02]"
-                >
-                  {preset}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       )}
 

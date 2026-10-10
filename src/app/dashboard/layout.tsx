@@ -159,10 +159,10 @@ export default function DashboardLayout({
 
         <div className="mt-3 px-3 py-2 rounded bg-[#130926] border border-[#FF2A85]/15">
           <p className="font-hud text-[0.65rem] font-bold text-[#00F0FF] uppercase tracking-wider">
-            VICE CITY CREW // TEAM 4
+            VICE CITY CREW
           </p>
           <p className="font-mono text-[0.65rem] text-[#A192C2] mt-0.5">
-            Puttashankar · Prasiddh · Bidappa
+            Event Operations Platform
           </p>
         </div>
       </div>
