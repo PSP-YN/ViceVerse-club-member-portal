@@ -27,7 +27,7 @@ export function AnnouncementsClient({ initialAnnouncements }: { initialAnnouncem
     // Subscribe to realtime changes on the announcements table
     const channel = supabase
       .channel('announcements_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'announcements' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'announcements' }, (_payload: any) => {
         fetchAnnouncements();
       })
       .subscribe();

@@ -28,29 +28,14 @@ async function getStats() {
   const teams = await getApprovedTeams(supabase);
   const summary = buildSummary(teams, [], new Date());
 
-<<<<<<< HEAD
+
   const { data: announcements } = await supabase
     .from("announcements")
     .select("id, title, message, created_at")
     .eq("is_active", true)
     .order("created_at", { ascending: false })
     .limit(3);
-=======
-  const members = (membersRes.data ?? []) as Array<{
-    registration_status: boolean;
-    goodies_status: boolean;
-    lunch_status: boolean;
-    snacks_status: boolean;
-    team_id?: string;
-  }>;
-  const teams = (teamsRes.data ?? []) as Array<{ id: string }>;
-  const announcements = (announcementsRes.data ?? []) as Array<{
-    id: string;
-    title: string;
-    message: string;
-    created_at: string;
-  }>;
->>>>>>> origin/master
+
 
   const totalMembers = summary.totalMembers;
   const totalTeams = teams.length;
