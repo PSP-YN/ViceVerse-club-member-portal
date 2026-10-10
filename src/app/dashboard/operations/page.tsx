@@ -85,58 +85,14 @@ export default async function OperationsPage() {
     // Database empty or demo environment
   }
 
-  // Realistic sample metrics if DB is in demo state
-  const totalTeams = data.totalTeams > 0 ? data.totalTeams : 48;
-  const totalMembers = data.totalMembers > 0 ? data.totalMembers : 144;
-  const registered = data.totalMembers > 0 ? data.registered : 118;
-  const goodies = data.totalMembers > 0 ? data.goodies : 112;
-  const lunch = data.totalMembers > 0 ? data.lunch : 98;
-  const snacks = data.totalMembers > 0 ? data.snacks : 84;
-
-  const demoLogs = [
-    {
-      id: "log-1",
-      performed_by_name: "Puttashankar Prasad",
-      activity: "lunch",
-      team_id: "IDN26-042",
-      member_name: "Arjun Varma",
-      timestamp: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
-    },
-    {
-      id: "log-2",
-      performed_by_name: "Prasiddh",
-      activity: "goodies",
-      team_id: "IDN26-018",
-      member_name: "Karan Patel",
-      timestamp: new Date(Date.now() - 1000 * 60 * 7).toISOString(),
-    },
-    {
-      id: "log-3",
-      performed_by_name: "Bidappa",
-      activity: "registration",
-      team_id: "IDN26-009",
-      member_name: "Meera Nair",
-      timestamp: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-    },
-    {
-      id: "log-4",
-      performed_by_name: "Puttashankar Prasad",
-      activity: "snacks",
-      team_id: "IDN26-031",
-      member_name: "Dev Dixit",
-      timestamp: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
-    },
-    {
-      id: "log-5",
-      performed_by_name: "Prasiddh",
-      activity: "registration",
-      team_id: "IDN26-055",
-      member_name: "Pooja Hegde",
-      timestamp: new Date(Date.now() - 1000 * 60 * 25).toISOString(),
-    },
-  ];
-
-  const logsToDisplay = data.recentLogs.length > 0 ? data.recentLogs : demoLogs;
+  // Use actual data metrics
+  const totalTeams = data.totalTeams;
+  const totalMembers = data.totalMembers;
+  const registered = data.registered;
+  const goodies = data.goodies;
+  const lunch = data.lunch;
+  const snacks = data.snacks;
+  const logsToDisplay = data.recentLogs;
 
   const cards = [
     {
@@ -275,40 +231,9 @@ export default async function OperationsPage() {
           </p>
 
           <div className="space-y-2">
-            {[
-              { id: "IDN26-004", name: "CyberPulse", missing: "Lunch, Snacks" },
-              { id: "IDN26-012", name: "Nexus Quantum", missing: "Goodies, Lunch" },
-              { id: "IDN26-019", name: "AeroDynamics", missing: "Snacks" },
-              { id: "IDN26-027", name: "BioSynthetix", missing: "Lunch" },
-              { id: "IDN26-033", name: "Vortex Intelligence", missing: "Goodies, Snacks" },
-            ].map((item, idx) => (
-              <div
-                key={idx}
-                className="p-3 rounded-lg bg-[#160B2E] border border-[#FF2A85]/20 flex items-center justify-between hover:border-[#00F0FF] transition-colors"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-[#FF2A85]">
-                      {item.id}
-                    </span>
-                    <span className="font-hud text-sm font-bold text-white uppercase">
-                      {item.name}
-                    </span>
-                  </div>
-                  <p className="font-hud text-[0.6875rem] text-[#FFB800] uppercase mt-0.5">
-                    UNCOLLECTED: {item.missing}
-                  </p>
-                </div>
-
-                <Link
-                  href={`/dashboard/team?id=${item.id}`}
-                  className="btn-ghost py-1.5 px-2.5 text-[0.6875rem] font-hud flex items-center gap-1"
-                >
-                  <span>OPEN</span>
-                  <ExternalLink className="w-3 h-3" />
-                </Link>
-              </div>
-            ))}
+          <div className="flex items-center justify-center p-4 border border-[#FF2A85]/20 rounded-lg">
+            <span className="text-[#A192C2] text-xs font-hud">QUEUED TEAMS DISPLAY COMING SOON</span>
+          </div>
           </div>
         </div>
 

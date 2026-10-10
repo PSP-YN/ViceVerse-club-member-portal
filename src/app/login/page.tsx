@@ -13,7 +13,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleLogin(e: React.FormEvent) {
@@ -60,15 +59,6 @@ export default function LoginPage() {
     }
   }
 
-  function handleDemoLogin() {
-    setDemoLoading(true);
-    // Set demo cookie to bypass middleware during evaluation/demo
-    document.cookie = "vv_demo_auth=true; path=/; max-age=86400; SameSite=Lax";
-    setTimeout(() => {
-      router.push("/dashboard");
-      router.refresh();
-    }, 400);
-  }
 
   return (
     <div className="min-h-screen relative flex items-center justify-center px-4 py-8 overflow-hidden bg-[#090514]">
@@ -206,35 +196,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="relative flex items-center justify-center py-2">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#FF2A85]/20" />
-            </div>
-            <span className="relative px-3 bg-[#120924] font-hud text-[0.65rem] tracking-widest text-[#A192C2] uppercase">
-              OR FOR EVALUATORS & DEMO
-            </span>
-          </div>
-
-          {/* 1-Click Quick Demo Access */}
-          <button
-            type="button"
-            onClick={handleDemoLogin}
-            disabled={demoLoading}
-            className="btn-cyan w-full py-2.5 text-xs font-hud font-bold tracking-widest uppercase flex items-center justify-center gap-2"
-          >
-            {demoLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                INITIALIZING DEMO SESSION...
-              </>
-            ) : (
-              <>
-                <Zap className="w-4 h-4 fill-current" />
-                QUICK ACCESS (DEMO CREW PASS)
-              </>
-            )}
-          </button>
         </div>
 
         {/* Footer info */}
